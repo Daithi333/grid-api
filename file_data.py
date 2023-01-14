@@ -13,21 +13,61 @@ from models.data_filter import DataFilter, RowFilter
 
 class FileData:
 
-    @staticmethod
-    def get_data(file_id: str, limit: int, offset: int):
+    @classmethod
+    def get_data(cls, file_id: str, limit: int, offset: int):
         cells = load_excel(file_id)
-        header_cells = cells[0]
-        row_cells = cells[offset:offset+limit]
 
-        headers: List[str] = [c.value for c in header_cells]
-        rows = [[c.value for c in r] for r in row_cells]
+        row_data = []
+        for row_number, row_cells in enumerate(cells[1:]):
+            row = {'_rowNumber': row_number + 1}
+            for i, hc in enumerate(cells[0]):
+                row[hc.value] = row_cells[i].value
+            row_data.append(row)
 
         return {
-            'headers': encode_row(headers),
-            'rows': encode(rows),
-            'count': len(rows),
-            'total': len(cells)
+            'columnDefs': cls._get_column_definitions(cells),
+            'rowData': row_data
         }
+
+    @classmethod
+    def _get_column_definitions(cls, cells) -> List[dict]:
+        """Get ag-grid column properties based on openpyxl data_types"""
+
+        data_type_props = {
+            'n': {'filter': 'agNumberColumnFilter'},
+            's': {'filter': 'agTextColumnFilter'},
+            'd': {'filter': 'agDateColumnFilter'},
+            'f': {'filter': 'agNumberColumnFilter', 'editable': False},
+            'e': {'filter': 'agNumberColumnFilter', 'editable': False}
+        }
+
+        data_types = cls._get_column_data_types(cells)
+
+        column_definitions = []
+        for i, hc in enumerate(cells[0]):
+            column_def = {'field': hc.value, 'colId': hc.column_letter, **data_type_props[data_types[i]]}
+            if data_types[i] in ['e', 'f']:
+                column_def['headerName'] = column_def['field'] + '*'
+            column_definitions.append(column_def)
+
+        return column_definitions
+
+    @classmethod
+    def _get_column_data_types(cls, cells) -> List[str]:
+        """Return list of column data types based on the first populated row in each column."""
+        data_types = [cell.data_type if cell.value else None for cell in cells[1]]
+
+        for col_index, data_type in enumerate(data_types):
+            if data_type is not None:
+                continue
+
+            data_types[col_index] = 'n'  # default to 'n' as openpyxl does, in case entire column is empty
+            for row_cells in cells[2:]:
+                if row_cells[col_index].value is not None:
+                    data_types[col_index] = row_cells[col_index].data_type
+                    break
+
+        return data_types
 
     @classmethod
     def get_filtered_data(cls, file_id: str, limit: int, offset: int, data_filter: DataFilter):
@@ -124,8 +164,8 @@ def load_excel(file_id: str) -> List[List[ReadOnlyCell]]:
         raise NotFoundError(f'File {file_id!r} not found')
 
     file_bytes = io.BytesIO(file.blob)
-    wb = load_workbook(file_bytes, read_only=True)
-    ws = wb.active  # only get single (first) workbook for now
+    wb = load_workbook(file_bytes, read_only=True, data_only=True)
+    ws = wb.active  # only get single (first) worksheet for now
     return list(ws.rows)[:]
 
 
