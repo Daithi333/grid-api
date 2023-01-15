@@ -23,33 +23,44 @@ class File(Base):
     blob = Column(LargeBinary)
 
 
+class View(Base):
+    __tablename__ = "view"
+
+    id = Column(Integer, primary_key=True)
+    file_id = Column(Integer, ForeignKey('file.id'))
+    name = Column(String)
+    _fields = Column(String)
+
+    filters = relationship('Filter', backref="view")
+
+    @property
+    def fields(self) -> List[str]:
+        return json.loads(self._fields)
+
+    @fields.setter
+    def fields(self, fields: List[str]):
+        self._fields = json.dumps(fields)
+
+
 class Filter(Base):
     __tablename__ = "filter"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)
-    _columns = Column(String)
+    view_id = Column(Integer, ForeignKey('view.id'))
+    field = Column(String)
+    filter_type = Column(String)
+    operator = Column(String)
 
-    rows = relationship('FilterRow', backref="filter")
-
-    @property
-    def columns(self) -> List[str]:
-        return json.loads(self._columns)
-
-    @columns.setter
-    def columns(self, columns: List[str]):
-        self._columns = json.dumps(columns)
+    conditions = relationship('Condition', backref="filter")
 
 
-class FilterRow(Base):
-    __tablename__ = "filter_row"
+class Condition(Base):
+    __tablename__ = "condition"
 
     id = Column(Integer, primary_key=True)
     filter_id = Column(Integer, ForeignKey('filter.id'))
-    column = Column(String)
     operator = Column(String)
-    value = Column(String)
-    index = Column(Integer)
+    value = Column(String, nullable=True)
 
 
 # Base.metadata.drop_all(engine)

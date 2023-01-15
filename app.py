@@ -3,7 +3,7 @@ import io
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 
-from db import get_session, File, Filter, FilterRow
+from db import get_session, File, View, Filter, Condition
 from error import NotFoundError, BadRequestError, handle_not_found, handle_bad_request
 from file_data import FileData, get_cache_summary
 from models.data_filter import RowFilter, DataFilter
@@ -124,75 +124,76 @@ def get_cache():
     return get_cache_summary()
 
 
-@app.post("/filter")
-def add_filter():
+@app.post("/views")
+def add_view():
+    file_id = request.json.get('fileId')
     name = request.json.get('name')
-    columns = request.json.get('columns')
-    rows_data = request.json.get('rows')
+    fields = request.json.get('fields', [])
+    filters_data = request.json.get('filters', [])
 
-    if not name or not columns or not rows_data:
-        return {'message': 'filter data missing in request'}, 400
+    if not file_id or not name:
+        return {'message': 'name and file id required'}, 400
 
-    rows = [FilterRow(**r) for r in rows_data]
-    # need to validate indices of filter rows
-    filter_ = Filter(name=name, columns=columns, rows=rows)
+    if not fields and not filters_data:
+        return {'message': 'view expected to have columns and/or row filters'}, 400
+
+    filters = []
+    for f in filters_data:
+        conditions = [Condition(**c) for c in f['conditions']]
+        filter_ = Filter(field=f['field'], filter_type=f['filterType'], operator=f['operator'], conditions=conditions)
+        filters.append(filter_)
+
+    view = View(file_id=file_id, name=name, fields=fields, filters=filters)
     session = next(get_session())
-    session.add(filter_)
+    session.add(view)
     session.commit()
-    session.refresh(filter_)
+    session.refresh(view)
 
-    return {"id": filter_.id}
-
-
-@app.get("/filter")
-def get_filter():
-    filter_id = request.args.get('id')
-    if not filter_id:
-        return {'message': 'filter id not found in request'}, 400
-
-    with next(get_session()) as session:
-        filter_ = session.query(Filter).filter_by(id=filter_id).one_or_none()
-
-        if not filter_:
-            return {'message': f'filter {filter_id} not found'}, 404
-
-        return {
-            'id': filter_.id,
-            'name': filter_.name,
-            'columns': filter_.columns,
-            'rows ': [
-                {
-                    'id': r.id, 'column': r.column, 'operator': r.operator, 'value': r.value, 'index': r.index
-                } for r in filter_.rows
-            ]
-        }
+    return {"id": view.id}
 
 
-@app.get("/filters")
-def list_filters():
-    with next(get_session()) as session:
-        filters = session.query(Filter).all()
-        return jsonify([
+@app.get("/views")
+def get_views():
+    session = next(get_session())
+    view_id = request.args.get('id')
+
+    if view_id:
+        view = session.query(View).filter_by(id=view_id).one_or_none()
+        if not view:
+            return {'message': f'view {view_id} not found'}, 404
+
+        return _view_to_dict(view)
+
+    else:
+        views = session.query(View).all()
+        return jsonify([_view_to_dict(v) for v in views])
+
+
+def _view_to_dict(view: View) -> dict:
+    return {
+        'id': view.id,
+        'file_id': view.file_id,
+        'name': view.name,
+        'fields': view.fields,
+        'filters': [
             {
-                'id': f.id,
-                'name': f.name,
-                'columns': f.columns,
-                'rows ': [
-                    {
-                        'id': r.id, 'column': r.column, 'operator': r.operator, 'value': r.value, 'index': r.index
-                    } for r in f.rows
-                ]
-            } for f in filters
-        ])
+                'field': f.field,
+                'filterType': f.filter_type,
+                'operator': f.operator,
+                'conditions': [{'operator': c.operator, 'value': c.value} for c in f.conditions]
+            }
+            for f in view.filters
+        ]
+    }
 
 
-@app.delete("/filters")
-def delete_filter():
-    filter_id = request.args.get('id')
-    if not filter_id:
-        return {'message': 'id not provided in request'}, 400
+@app.delete("/views")
+def delete_view():
+    view_id = request.args.get('id')
+    if not view_id:
+        return {'message': 'id not found in request'}, 400
 
     with next(get_session()) as session:
-        session.query(File).filter_by(id=filter_id).delete()
+        session.query(View).filter_by(id=view_id).delete()
         session.commit()
     return {'success': True}
