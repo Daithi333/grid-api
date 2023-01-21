@@ -140,7 +140,7 @@ def add_view():
     filters = []
     for f in filters_data:
         conditions = [Condition(**c) for c in f['conditions']]
-        filter_ = Filter(field=f['field'], filter_type=f['filterType'], operator=f['operator'], conditions=conditions)
+        filter_ = Filter(field=f['field'], filter_type=f['filterType'], operator=f.get('operator'), conditions=conditions)
         filters.append(filter_)
 
     view = View(file_id=file_id, name=name, fields=fields, filters=filters)
@@ -155,17 +155,21 @@ def add_view():
 @app.get("/views")
 def get_views():
     session = next(get_session())
+    file_id = request.args.get('fileId')
+    if not file_id:
+        return {'message': 'file_id not found in request'}, 404
+
     view_id = request.args.get('id')
 
     if view_id:
-        view = session.query(View).filter_by(id=view_id).one_or_none()
+        view = session.query(View).filter_by(id=view_id, file_id=file_id).one_or_none()
         if not view:
             return {'message': f'view {view_id} not found'}, 404
 
         return _view_to_dict(view)
 
     else:
-        views = session.query(View).all()
+        views = session.query(View).filter_by(file_id=file_id).all()
         return jsonify([_view_to_dict(v) for v in views])
 
 

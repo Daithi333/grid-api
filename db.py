@@ -49,7 +49,7 @@ class Filter(Base):
     view_id = Column(Integer, ForeignKey('view.id'))
     field = Column(String)
     filter_type = Column(String)
-    operator = Column(String)
+    operator = Column(String, nullable=True)
 
     conditions = relationship('Condition', backref="filter")
 
