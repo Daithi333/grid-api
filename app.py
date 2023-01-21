@@ -42,6 +42,34 @@ def add_file():
     return {"id": file_.id}
 
 
+@app.put("/files")
+def update_file():
+    file_id = request.args.get('id')
+    if not file_id:
+        return {'message': 'id not provided in request'}, 400
+
+    file = request.files.get('file')
+    if not file:
+        return {'message': 'file not found in request'}, 400
+
+    content_type_full = file.content_type
+    content_type = content_type_full.split('.')[0]
+    if content_type not in ['application/vnd']:
+        return {'message': f'unsupported file type {content_type!r}'}, 400
+
+    session = next(get_session())
+    file_ = session.query(File).filter_by(id=file_id).one_or_none()
+    if not file_:
+        return {'message': f'file {file_id!r} not found'}, 404
+
+    file.blob = file.read()
+    file_.name = file.filename
+    file_.content_type = content_type_full
+    session.commit()
+
+    return {"id": file_.id}
+
+
 @app.get("/files")
 def list_files():
     with next(get_session()) as session:
