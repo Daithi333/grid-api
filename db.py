@@ -63,6 +63,18 @@ class Condition(Base):
     value = Column(String, nullable=True)
 
 
+class Lookup(Base):
+    __tablename__ = "lookup"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    file_id = Column(Integer, ForeignKey('file.id'))
+    field = Column(String)
+    lookup_file_id = Column(Integer, ForeignKey('file.id'))
+    lookup_field = Column(String)
+    operator = Column(String)
+
+
 # Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 

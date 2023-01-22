@@ -3,7 +3,7 @@ import io
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 
-from db import get_session, File, View, Filter, Condition
+from db import get_session, File, View, Filter, Condition, Lookup
 from error import NotFoundError, BadRequestError, handle_not_found, handle_bad_request
 from file_data import FileData, get_cache_summary
 from models.data_filter import RowFilter, DataFilter
@@ -225,7 +225,82 @@ def delete_view():
     if not view_id:
         return {'message': 'id not found in request'}, 400
 
-    with next(get_session()) as session:
-        session.query(View).filter_by(id=view_id).delete()
-        session.commit()
+    session = next(get_session())
+    view = session.query(View).filter_by(id=view_id).one_or_none()
+    if not view:
+        return {'message': f'lookup {view_id!r} not found'}, 404
+
+    session.delete(view)
+    session.commit()
+    return {'success': True}
+
+
+@app.post("/lookups")
+def add_lookup():
+    file_id = request.json.get('fileId')
+    field = request.json.get('lookupField')
+    name = request.json.get('name')
+    lookup_file_id = request.json.get('lookupFileId')
+    lookup_field = request.json.get('lookupField')
+    operator = request.json.get('operator')
+
+    if not any([file_id, field, name, lookup_file_id, lookup_field, operator]):
+        return {'message': 'some lookup fields were missing'}, 400
+
+    lookup = Lookup(name=name, file_id=file_id, field=field,
+                    lookup_file_id=lookup_file_id, lookup_field=lookup_field, operator=operator)
+    session = next(get_session())
+    session.add(lookup)
+    session.commit()
+    session.refresh(lookup)
+
+    return {"id": lookup.id}
+
+
+@app.get("/lookups")
+def get_lookups():
+    session = next(get_session())
+    file_id = request.args.get('fileId')
+    if not file_id:
+        return {'message': 'file_id not found in request'}, 404
+
+    lookup_id = request.args.get('id')
+
+    if lookup_id:
+        lookup = session.query(Lookup).filter_by(id=lookup_id, file_id=file_id).one_or_none()
+        if not lookup:
+            return {'message': f'lookup {lookup_id!r} not found'}, 404
+
+        return _lookup_to_dict(lookup)
+
+    else:
+        lookups = session.query(Lookup).filter_by(file_id=file_id).all()
+        return jsonify([_lookup_to_dict(lk) for lk in lookups])
+
+
+def _lookup_to_dict(lookup: Lookup) -> dict:
+    return {
+            'id': lookup.id,
+            'name': lookup.name,
+            'fileId': lookup.file_id,
+            'field': lookup.field,
+            'lookupFileId': lookup.lookup_file_id,
+            'lookupField': lookup.lookup_field,
+            'operator': lookup.operator
+        }
+
+
+@app.delete("/lookups")
+def delete_lookup():
+    lookup_id = request.args.get('id')
+    if not lookup_id:
+        return {'message': 'id not found in request'}, 400
+
+    session = next(get_session())
+    lookup = session.query(Lookup).filter_by(id=lookup_id).one_or_none()
+    if not lookup:
+        return {'message': f'lookup {lookup_id!r} not found'}, 404
+
+    session.delete(lookup)
+    session.commit()
     return {'success': True}
