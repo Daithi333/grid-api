@@ -5,8 +5,8 @@ from typing import List, Union, Tuple
 from openpyxl import load_workbook
 from openpyxl.cell import ReadOnlyCell
 
-from app import File
-from db import get_session
+from database import db
+from database.models import File
 from error import NotFoundError, BadRequestError
 from models.data_filter import DataFilter, RowFilter
 
@@ -158,7 +158,7 @@ class FileData:
 
 @lru_cache(maxsize=50)
 def load_excel(file_id: str) -> List[List[ReadOnlyCell]]:
-    with next(get_session()) as session:
+    with next(db.get_session()) as session:
         file = session.query(File).filter_by(id=file_id).one_or_none()
     if not file:
         raise NotFoundError(f'File {file_id!r} not found')
