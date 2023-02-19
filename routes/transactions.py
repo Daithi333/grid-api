@@ -59,6 +59,32 @@ def get_transactions():
         return jsonify([_transaction_to_dict(t) for t in transactions_])
 
 
+@transactions.put("")
+def update_transaction():
+    transaction_id = request.args.get('id')
+    if not transaction_id:
+        return {'message': 'id not provided in request'}, 400
+
+    status = request.json.get('status')
+    notes = request.json.get('notes')
+
+    if not status:
+        return {'message': 'status not provided in request'}, 400
+
+    session = next(db.get_session())
+    transaction = session.query(Transaction).filter_by(id=transaction_id).one_or_none()
+    if not transaction:
+        return {'message': f'Transaction {transaction_id!r} not found'}, 404
+
+    transaction.status = ApprovalStatus[status]
+    if transaction.status == ApprovalStatus.APPROVED:
+        transaction.user_id = '2'
+    transaction.notes = notes
+
+    session.commit()
+    return _transaction_to_dict(transaction)
+
+
 def _transaction_to_dict(transaction: Transaction) -> dict:
     return {
         'id': transaction.id,
@@ -80,11 +106,6 @@ def _transaction_to_dict(transaction: Transaction) -> dict:
             for c in transaction.changes
         ]
     }
-
-
-@transactions.put("")
-def update_transaction():
-    pass
 
 
 @transactions.delete("")

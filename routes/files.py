@@ -5,7 +5,6 @@ from flask import Blueprint, request, jsonify, send_file
 from database import db
 from database.models import File
 from services.file_data import FileData
-from models.data_filter import RowFilter, DataFilter
 
 files = Blueprint('files', __name__, url_prefix='/files')
 
@@ -19,9 +18,6 @@ def add_file():
     content_type = content_type_full.split('.')[0]
     if content_type not in ['application/vnd']:
         return {'message': f'unsupported file type {content_type!r}'}, 400
-
-    # with open('stats.xlsx', 'rb') as input_file:
-    #     blob = input_file.read()
 
     session = next(db.get_session())
     file_ = File(blob=file.read(), name=file.filename, content_type=content_type_full)
@@ -105,45 +101,11 @@ def download_file():
     blob = io.BytesIO(file.blob)
     return send_file(blob, mimetype=file.content_type, as_attachment=True, download_name=file.name)
 
-    # with open(f'out_{file.name}', "wb") as output_file:
-    #     output_file.write(file.blob)
-    # return {'success': True}
-
 
 @files.get("/data")
 def get_file_data():
     file_id = request.args.get('id')
-    limit = int(request.args.get('limit', 100))
-    offset = int(request.args.get('offset', 0))
     if not file_id:
         return {'message': 'file id not found in request'}, 400
 
-    return FileData.get_data(file_id, limit, offset)
-
-
-@files.get("/filter-data")
-def get_filtered_data():
-    data = request.get_json()
-    file_id = data.get('id')
-    if not file_id:
-        return {'message': 'file id not found in request'}, 400
-
-    limit = int(data.get('limit', 100))
-    offset = int(data.get('offset', 0))
-
-    filter_data = data.get('filter')
-    if not filter_data:
-        return {'message': 'filter not found in request'}, 400
-
-    cols_data = filter_data.get('columns')
-    if cols_data is None or cols_data is None:
-        return {'message': 'Provided filter requires columns'}, 400
-    rows_data = filter_data.get('rows')
-    if rows_data is None:
-        return {'message': 'Provided filter requires rows '}, 400
-
-    row_filters = [RowFilter(**r) for r in rows_data]
-    row_filters.sort(key=lambda x: x.index)
-    data_filter = DataFilter(columns=cols_data, rows=row_filters)
-
-    return FileData.get_filtered_data(file_id, limit, offset, data_filter)
+    return FileData.get_data(file_id)
