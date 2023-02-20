@@ -48,9 +48,13 @@ def update_file():
     if not file_:
         return {'message': f'file {file_id!r} not found'}, 404
 
-    file.blob = file.read()
+    file_.blob = file.read()
     file_.name = file.filename
     file_.content_type = content_type_full
+
+    for t in file_.transactions:
+        session.delete(t)
+
     session.commit()
 
     return {"id": file_.id}
@@ -108,4 +112,9 @@ def get_file_data():
     if not file_id:
         return {'message': 'file id not found in request'}, 400
 
-    return FileData.get_data(file_id)
+    session = next(db.get_session())
+    file = session.query(File).filter_by(id=file_id).one_or_none()
+    if not file:
+        return {'message': f'file {file_id} not found'}, 404
+
+    return FileData.get_data(file)

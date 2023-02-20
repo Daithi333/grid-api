@@ -1,8 +1,8 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 
+from services import file_cache
 from error import NotFoundError, BadRequestError, handle_not_found, handle_bad_request
-from services.file_data import get_cache_summary
 from routes import files, views, lookups, transactions
 
 app = Flask(__name__)
@@ -21,6 +21,20 @@ def read_root():
     return {"message": "ok"}
 
 
-@app.get("/cache/summary")
-def get_cache():
-    return get_cache_summary()
+@app.get("/cache")
+def get_cache_summary():
+    return file_cache.summary()
+
+
+@app.delete("/cache")
+def clear_from_cache():
+    file_id = request.args.get('id')
+    if file_id:
+        success = file_cache.remove(file_id)
+        message = f'File {file_id} cleared from file cache'
+    else:
+        success = file_cache.clear()
+        message = 'File cache cleared'
+
+    return {'success': success, 'message': message}
+

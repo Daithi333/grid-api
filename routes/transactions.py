@@ -1,8 +1,12 @@
+import traceback
+
 from flask import Blueprint, request, jsonify
 
 from database import db
 from database.models import Transaction, Change
 from enums import ChangeType, ApprovalStatus
+from error import BadRequestError
+from services.file_data import FileData
 
 transactions = Blueprint('transactions', __name__, url_prefix='/transactions')
 
@@ -78,6 +82,12 @@ def update_transaction():
 
     transaction.status = ApprovalStatus[status]
     if transaction.status == ApprovalStatus.APPROVED:
+        try:
+            FileData.apply_changes(transaction.file, transaction.changes)
+        except Exception as e:
+            traceback.print_exc()
+            raise BadRequestError(f'unable to apply changes in transaction {transaction_id}: {e}')
+
         transaction.user_id = '2'
     transaction.notes = notes
 

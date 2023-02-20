@@ -1,20 +1,21 @@
 import io
-from functools import lru_cache
-from typing import List, Union, Tuple
+from typing import List
 
-from openpyxl import load_workbook
-from openpyxl.cell import ReadOnlyCell
+from openpyxl import load_workbook, Workbook
+from openpyxl.worksheet.worksheet import Worksheet
 
 from database import db
-from database.models import File
-from error import NotFoundError
+from database.models import File, Change
+from services import file_cache
+from services.file_cache import load_excel
+from enums import ChangeType
 
 
 class FileData:
 
     @classmethod
-    def get_data(cls, file_id: str):
-        cells = load_excel(file_id)
+    def get_data(cls, file: File):
+        cells = load_excel(file)
 
         row_data = []
         for row_number, row_cells in enumerate(cells[1:]):
@@ -68,25 +69,80 @@ class FileData:
 
         return data_types
 
+    @classmethod
+    def apply_changes(cls, file: File, changes: List[Change]) -> bool:
+        """Apply transaction changes to the actual saved excel file.
+           Changes are applied in reverse row number order, so creates and deletes don't affect subsequent changes.
+           TODO - Other pending transactions will still be affected and need a solution.
+        """
+        wb = cls._load_workbook(file)
+        ws = wb.active  # only get single (first) worksheet for now
 
-@lru_cache(maxsize=50)
-def load_excel(file_id: str) -> List[List[ReadOnlyCell]]:
-    with next(db.get_session()) as session:
-        file = session.query(File).filter_by(id=file_id).one_or_none()
-    if not file:
-        raise NotFoundError(f'File {file_id!r} not found')
+        changes.sort(key=lambda x: x.row_number, reverse=True)
+        for change in changes:
+            if change.change_type == ChangeType.CREATE:
+                cls._handle_create(ws, change)
+            elif change.change_type == ChangeType.DELETE:
+                cls._handle_delete(ws, change)
+            else:  # update
+                cls._handle_update(ws, change)
 
-    file_bytes = io.BytesIO(file.blob)
-    wb = load_workbook(file_bytes, read_only=True, data_only=True)
-    ws = wb.active  # only get single (first) worksheet for now
-    return list(ws.rows)[:]
+        session = next(db.get_session())
+        wb_bytes = io.BytesIO()
+        wb.save(wb_bytes)
+        file.blob = wb_bytes.getvalue()
+        session.commit()
+        file_cache.remove(file.id)  # remove old version of file data from cache
+        return True
 
+    @classmethod
+    def _load_workbook(cls, file: File) -> Workbook:
+        """Load workbook in read/write mode for updating contents"""
+        file_bytes = io.BytesIO(file.blob)
+        wb = load_workbook(file_bytes, read_only=False, data_only=False)
+        return wb
 
-def get_cache_summary() -> dict:
-    cache_info = load_excel.cache_info()
-    return {
-        'hits': cache_info.hits,
-        'misses': cache_info.misses,
-        'maxsize': cache_info.maxsize,
-        'currsize': cache_info.currsize,
-    }
+    @staticmethod
+    def _handle_create(ws: Worksheet, change: Change):
+        """Add a new row to the end of a spreadsheet"""
+        new_row_number = ws.max_row + 1
+        new_row_data = change.after
+        header_cells = list(ws[1])
+
+        for hc in header_cells:
+            if hc.value not in new_row_data:
+                raise Exception(f'Column {hc.value!r} not found in new row data for Change {change.id!r}')
+            new_value = new_row_data[hc.value]
+            ws[f'{hc.column_letter}{new_row_number}'] = new_value
+            # TODO - handle formula columns
+
+    @staticmethod
+    def _handle_delete(ws: Worksheet, change: Change):
+        """Delete row specified by change row_number, if data matches change before value"""
+        deletion_row_number = change.row_number + 1
+        header_cells = list(ws[1])
+        row_cells = list(ws[deletion_row_number])
+
+        mismatches = []
+        for hc, rc in zip(header_cells, row_cells):
+            if rc.value != change.before[hc.value]:
+                mismatches.append({'header': hc.value, 'row value': rc.value, 'change': change.before[hc.value]})
+
+        if mismatches:
+            print(mismatches)
+            raise Exception(f'Worksheet row to be deleted does not match change {change.id!r} deletion data')
+
+        ws.delete_rows(deletion_row_number)
+
+    @staticmethod
+    def _handle_update(ws: Worksheet, change: Change):
+        """Update an existing row in the spreadsheet"""
+        update_row_number = change.row_number + 1
+        header_cells = list(ws[1])
+
+        for hc in header_cells:
+            if hc.value not in change.before:
+                raise Exception(f'Column {hc.value!r} not found in update row data for Change {change.id!r}')
+            new_value = change.after[hc.value]
+            ws[f'{hc.column_letter}{update_row_number}'] = new_value
+            # TODO - handle formula columns

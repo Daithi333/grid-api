@@ -19,3 +19,5 @@ class Config:
         DB_URL = f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
         DB_POOL_SIZE = os.getenv('DB_POOL_SIZE', 10)
+
+    FILE_CACHE_SIZE = int(os.getenv('CACHE_SIZE', 50))

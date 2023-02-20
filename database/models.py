@@ -25,6 +25,8 @@ class File(Base):
     content_type = Column(String, nullable=False)
     blob = Column(LargeBinary, nullable=False)
 
+    transactions = relationship("Transaction", back_populates="file", cascade='all, delete')
+
 
 class View(Base):
     __tablename__ = "view"
@@ -90,7 +92,8 @@ class Transaction(Base):
     approved_at = Column(DateTime(timezone=True), onupdate=func.now())
     approver_id = Column(Integer)
 
-    changes = relationship('Change', backref="transaction")
+    changes = relationship('Change', backref="transaction", cascade='all, delete')
+    file = relationship('File', back_populates="transactions")
 
 
 class Change(Base):
