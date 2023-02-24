@@ -20,7 +20,9 @@ def add_file():
         return {'message': f'unsupported file type {content_type!r}'}, 400
 
     session = next(db.get_session())
-    file_ = File(blob=file.read(), name=file.filename, content_type=content_type_full)
+    file_bytes = file.read()
+    data_types = FileData.get_data_types(file_bytes)
+    file_ = File(blob=file_bytes, name=file.filename, content_type=content_type_full, data_types=data_types)
     session.add(file_)
     session.commit()
     session.refresh(file_)

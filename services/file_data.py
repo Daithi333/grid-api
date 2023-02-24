@@ -25,12 +25,12 @@ class FileData:
             row_data.append(row)
 
         return {
-            'columnDefs': cls._get_column_definitions(cells),
+            'columnDefs': cls._get_column_definitions(cells, file.data_types),
             'rowData': row_data
         }
 
     @classmethod
-    def _get_column_definitions(cls, cells) -> List[dict]:
+    def _get_column_definitions(cls, cells, data_types: dict) -> List[dict]:
         """Get ag-grid column properties based on openpyxl data_types"""
 
         data_type_props = {
@@ -41,20 +41,23 @@ class FileData:
             'e': {'filter': 'agNumberColumnFilter', 'editable': False}
         }
 
-        data_types = cls._get_column_data_types(cells)
-
         column_definitions = []
-        for i, hc in enumerate(cells[0]):
-            column_def = {'field': hc.value, 'colId': hc.column_letter, **data_type_props[data_types[i]]}
-            if data_types[i] in ['e', 'f']:
+        for hc in cells[0]:
+            data_type = data_types[hc.value]
+            column_def = {'field': hc.value, 'colId': hc.column_letter, **data_type_props[data_type]}
+            if data_type in ['e', 'f']:
                 column_def['headerName'] = column_def['field'] + '*'
             column_definitions.append(column_def)
 
         return column_definitions
 
     @classmethod
-    def _get_column_data_types(cls, cells) -> List[str]:
-        """Return list of column data types based on the first populated row in each column."""
+    def get_data_types(cls, file_bytes: bytes) -> dict:
+        """Return dictionary of column header to data type, based on the first populated row for each column."""
+        wb = cls._load_workbook(file_bytes)
+        ws = wb.active
+        cells = list(ws.rows)[:]
+
         data_types = [cell.data_type if cell.value else None for cell in cells[1]]
 
         for col_index, data_type in enumerate(data_types):
@@ -67,7 +70,7 @@ class FileData:
                     data_types[col_index] = row_cells[col_index].data_type
                     break
 
-        return data_types
+        return {hc.value: dt for hc, dt in zip(cells[0], data_types)}
 
     @classmethod
     def apply_changes(cls, file: File, changes: List[Change]) -> bool:
@@ -75,7 +78,7 @@ class FileData:
            Changes are applied in reverse row number order, so creates and deletes don't affect subsequent changes.
            TODO - Other pending transactions will still be affected and need a solution.
         """
-        wb = cls._load_workbook(file)
+        wb = cls._load_workbook(file.blob)
         ws = wb.active  # only get single (first) worksheet for now
 
         changes.sort(key=lambda x: x.row_number, reverse=True)
@@ -96,10 +99,10 @@ class FileData:
         return True
 
     @classmethod
-    def _load_workbook(cls, file: File) -> Workbook:
-        """Load workbook in read/write mode for updating contents"""
-        file_bytes = io.BytesIO(file.blob)
-        wb = load_workbook(file_bytes, read_only=False, data_only=False)
+    def _load_workbook(cls, file_bytes: bytes) -> Workbook:
+        """Load workbook in read/write mode for updating contents or getting data types"""
+        virtual_file = io.BytesIO(file_bytes)
+        wb = load_workbook(virtual_file, read_only=False, data_only=False)
         return wb
 
     @staticmethod

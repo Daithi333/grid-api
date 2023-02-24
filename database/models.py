@@ -24,8 +24,17 @@ class File(Base):
     name = Column(String, nullable=False)
     content_type = Column(String, nullable=False)
     blob = Column(LargeBinary, nullable=False)
+    _data_types = Column(String, nullable=False)
 
     transactions = relationship("Transaction", back_populates="file", cascade='all, delete')
+
+    @property
+    def data_types(self) -> dict:
+        return json.loads(self._data_types)
+
+    @data_types.setter
+    def data_types(self, data_types: dict):
+        self._data_types = json.dumps(data_types)
 
 
 class View(Base):
