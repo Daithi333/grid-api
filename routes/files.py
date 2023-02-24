@@ -25,7 +25,7 @@ def add_file():
     session.commit()
     session.refresh(file_)
 
-    return {"id": file_.id}
+    return _file_to_dict(file_)
 
 
 @files.put("")
