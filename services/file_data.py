@@ -1,9 +1,13 @@
 import io
+from datetime import datetime
 from typing import List
 
 from openpyxl import load_workbook, Workbook
+from openpyxl.cell import ReadOnlyCell
+from openpyxl.formula.translate import Translator
 from openpyxl.worksheet.worksheet import Worksheet
 
+from constants import DATE_FORMAT
 from database import db
 from database.models import File, Change
 from services import file_cache
@@ -14,14 +18,20 @@ from enums import ChangeType
 class FileData:
 
     @classmethod
-    def get_data(cls, file: File):
-        cells = load_excel(file)
+    def get_data(cls, file: File) -> dict:
+        cells: List[List[ReadOnlyCell]] = load_excel(file)
 
         row_data = []
         for row_number, row_cells in enumerate(cells[1:]):
             row = {'_rowNumber': row_number + 1}
             for i, hc in enumerate(cells[0]):
-                row[hc.value] = row_cells[i].value
+                if file.data_types[hc.value] == 'd':
+                    cell_value = row_cells[i].value.strftime(DATE_FORMAT)
+                else:
+                    cell_value = row_cells[i].value
+
+                row[hc.value] = cell_value
+
             row_data.append(row)
 
         return {
@@ -84,18 +94,18 @@ class FileData:
         changes.sort(key=lambda x: x.row_number, reverse=True)
         for change in changes:
             if change.change_type == ChangeType.CREATE:
-                cls._handle_create(ws, change)
+                cls._handle_create(ws, change, file.data_types)
             elif change.change_type == ChangeType.DELETE:
                 cls._handle_delete(ws, change)
             else:  # update
-                cls._handle_update(ws, change)
+                cls._handle_update(ws, change, file.data_types)
 
         session = next(db.get_session())
         wb_bytes = io.BytesIO()
         wb.save(wb_bytes)
         file.blob = wb_bytes.getvalue()
         session.commit()
-        file_cache.remove(file.id)  # remove old version of file data from cache
+        file_cache.remove(str(file.id))  # remove old version of file data from cache
         return True
 
     @classmethod
@@ -105,8 +115,8 @@ class FileData:
         wb = load_workbook(virtual_file, read_only=False, data_only=False)
         return wb
 
-    @staticmethod
-    def _handle_create(ws: Worksheet, change: Change):
+    @classmethod
+    def _handle_create(cls, ws: Worksheet, change: Change, data_types: dict):
         """Add a new row to the end of a spreadsheet"""
         new_row_number = ws.max_row + 1
         new_row_data = change.after
@@ -115,9 +125,28 @@ class FileData:
         for hc in header_cells:
             if hc.value not in new_row_data:
                 raise Exception(f'Column {hc.value!r} not found in new row data for Change {change.id!r}')
-            new_value = new_row_data[hc.value]
-            ws[f'{hc.column_letter}{new_row_number}'] = new_value
-            # TODO - handle formula columns
+
+            data_type = data_types[hc.value]
+            new_cell = ws[f'{hc.column_letter}{new_row_number}']
+            new_value_str = new_row_data[hc.value]
+
+            if data_type in ['e', 'f']:
+                new_cell_formula = cls._generate_cell_formula(ws, hc.column_letter, new_row_number)
+                new_cell.value = new_cell_formula
+            elif data_type == 'd':
+                new_cell.value = datetime.strptime(new_value_str, DATE_FORMAT)
+                new_cell.number_format = 'DD/MM/YYYY'
+            elif data_type == 'n':
+                if new_value_str.isdigit():
+                    new_value = int(new_value_str)
+                else:
+                    try:
+                        new_value = float(new_value_str)
+                    except ValueError:
+                        new_value = new_value_str
+                new_cell.value = new_value
+            else:
+                new_cell.value = new_value_str
 
     @staticmethod
     def _handle_delete(ws: Worksheet, change: Change):
@@ -128,6 +157,9 @@ class FileData:
 
         mismatches = []
         for hc, rc in zip(header_cells, row_cells):
+            if rc.data_type in ['e', 'f']:
+                continue  # ignore value check on formula cells
+
             if rc.value != change.before[hc.value]:
                 mismatches.append({'header': hc.value, 'row value': rc.value, 'change': change.before[hc.value]})
 
@@ -138,14 +170,43 @@ class FileData:
         ws.delete_rows(deletion_row_number)
 
     @staticmethod
-    def _handle_update(ws: Worksheet, change: Change):
+    def _handle_update(ws: Worksheet, change: Change, data_types: dict):
         """Update an existing row in the spreadsheet"""
         update_row_number = change.row_number + 1
         header_cells = list(ws[1])
+        row_cells = list(ws[update_row_number])
 
-        for hc in header_cells:
+        for hc, rc in zip(header_cells, row_cells):
             if hc.value not in change.before:
                 raise Exception(f'Column {hc.value!r} not found in update row data for Change {change.id!r}')
-            new_value = change.after[hc.value]
-            ws[f'{hc.column_letter}{update_row_number}'] = new_value
-            # TODO - handle formula columns
+
+            if rc.data_type in ['e', 'f']:
+                continue
+
+            updated_value = change.after[hc.value]
+            if rc.data_type == 'n':
+                if updated_value.isdigit():
+                    updated_value = int(updated_value)
+                else:
+                    try:
+                        updated_value = float(updated_value)
+                    except ValueError:
+                        pass  # leave as string
+
+            ws[f'{hc.column_letter}{update_row_number}'] = updated_value
+
+    @classmethod
+    def _generate_cell_formula(cls, ws: Worksheet, column_letter: str, row_number: int) -> str:
+        """Simple formula creation based on formula found in row 2 of the passed in column"""
+        row2_formula = ws[f'{column_letter}2'].value
+        if not row2_formula:
+            return ''
+
+        return Translator(row2_formula, origin=f'{column_letter}2').translate_formula(f'{column_letter}{row_number}')
+
+        # cell_coords = re.findall(CELL_COORD_REGEX, row2_formula)
+        # new_cell_formula = row2_formula[:]
+        # for coord in cell_coords:
+        #     new_cell_formula = new_cell_formula.replace(coord, coord.replace('2', str(row_number)))
+        #
+        # return new_cell_formula

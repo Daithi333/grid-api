@@ -21,4 +21,4 @@ returning the new values.
  - user preferences - custom column widths, sort, etc
  - formulas - how to display and edit, formula vs value
  - Date filters in views
- - Date format - input and display
+ - Date support

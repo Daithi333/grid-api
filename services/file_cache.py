@@ -25,7 +25,7 @@ class FileCache(LRUCache):
 @FileCache
 def load_excel(file: File) -> List[List[ReadOnlyCell]]:
     file_bytes = io.BytesIO(file.blob)
-    wb = load_workbook(file_bytes, read_only=True, data_only=True)
+    wb = load_workbook(file_bytes, read_only=True, data_only=False)
     ws = wb.active  # only get single (first) worksheet for now
     return list(ws.rows)[:]
 

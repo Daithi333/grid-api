@@ -31,7 +31,7 @@ def clear_from_cache():
     file_id = request.args.get('id')
     if file_id:
         success = file_cache.remove(file_id)
-        message = f'File {file_id} cleared from file cache'
+        message = f'File {file_id} cleared from file cache' if success else 'File not in cache'
     else:
         success = file_cache.clear()
         message = 'File cache cleared'

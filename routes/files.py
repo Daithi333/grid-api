@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify, send_file
 
 from database import db
 from database.models import File
+from services import file_cache
 from services.file_data import FileData
 
 files = Blueprint('files', __name__, url_prefix='/files')
@@ -53,11 +54,13 @@ def update_file():
     file_.blob = file.read()
     file_.name = file.filename
     file_.content_type = content_type_full
+    file_.data_types = FileData.get_data_types(file_.blob)
 
     for t in file_.transactions:
         session.delete(t)
 
     session.commit()
+    file_cache.remove(str(file_.id))
 
     return {"id": file_.id}
 
