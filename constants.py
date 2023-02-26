@@ -1,2 +1,3 @@
 DATE_FORMAT = '%d/%m/%Y'
+DATE_STYLE = 'DD/MM/YYYY'
 CELL_COORD_REGEX = r'[A-Z]+2'

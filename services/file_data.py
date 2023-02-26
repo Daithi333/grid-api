@@ -1,13 +1,19 @@
 import io
+import os
+import tempfile
+import traceback
 from datetime import datetime
 from typing import List
 
+import pythoncom
+import xlwings
 from openpyxl import load_workbook, Workbook
 from openpyxl.cell import ReadOnlyCell
 from openpyxl.formula.translate import Translator
 from openpyxl.worksheet.worksheet import Worksheet
 
-from constants import DATE_FORMAT
+from config import Config
+from constants import DATE_FORMAT, DATE_STYLE
 from database import db
 from database.models import File, Change
 from services import file_cache
@@ -101,9 +107,8 @@ class FileData:
                 cls._handle_update(ws, change, file.data_types)
 
         session = next(db.get_session())
-        wb_bytes = io.BytesIO()
-        wb.save(wb_bytes)
-        file.blob = wb_bytes.getvalue()
+        file_bytes = cls._convert_to_bytes(wb, file.name)
+        file.blob = file_bytes
         session.commit()
         file_cache.remove(str(file.id))  # remove old version of file data from cache
         return True
@@ -135,7 +140,7 @@ class FileData:
                 new_cell.value = new_cell_formula
             elif data_type == 'd':
                 new_cell.value = datetime.strptime(new_value_str, DATE_FORMAT)
-                new_cell.number_format = 'DD/MM/YYYY'
+                new_cell.number_format = DATE_STYLE
             elif data_type == 'n':
                 if new_value_str.isdigit():
                     new_value = int(new_value_str)
@@ -157,14 +162,16 @@ class FileData:
 
         mismatches = []
         for hc, rc in zip(header_cells, row_cells):
+            excel_value = rc.value
             if rc.data_type in ['e', 'f']:
                 continue  # ignore value check on formula cells
-
-            if rc.value != change.before[hc.value]:
-                mismatches.append({'header': hc.value, 'row value': rc.value, 'change': change.before[hc.value]})
+            if rc.data_type == 'd':
+                excel_value = excel_value.strftime(DATE_FORMAT)
+            if excel_value != change.before[hc.value]:
+                mismatches.append({'column': hc.value, 'excel': excel_value, 'expected': change.before[hc.value]})
 
         if mismatches:
-            print(mismatches)
+            print(f'Unable to delete row as it is not as expected. Mis-matches: {mismatches}')
             raise Exception(f'Worksheet row to be deleted does not match change {change.id!r} deletion data')
 
         ws.delete_rows(deletion_row_number)
@@ -183,17 +190,23 @@ class FileData:
             if rc.data_type in ['e', 'f']:
                 continue
 
-            updated_value = change.after[hc.value]
+            update_cell = ws[f'{hc.column_letter}{update_row_number}']
+            updated_value_str = str(change.after[hc.value])
+
             if rc.data_type == 'n':
-                if updated_value.isdigit():
-                    updated_value = int(updated_value)
+                if updated_value_str.isdigit():
+                    updated_value = int(updated_value_str)
                 else:
                     try:
-                        updated_value = float(updated_value)
+                        updated_value = float(updated_value_str)
                     except ValueError:
-                        pass  # leave as string
-
-            ws[f'{hc.column_letter}{update_row_number}'] = updated_value
+                        updated_value = updated_value_str
+                update_cell.value = updated_value
+            elif rc.data_type == 'd':
+                update_cell.value = datetime.strptime(updated_value_str, DATE_FORMAT)
+                update_cell.number_format = DATE_STYLE
+            else:
+                update_cell.value = updated_value_str
 
     @classmethod
     def _generate_cell_formula(cls, ws: Worksheet, column_letter: str, row_number: int) -> str:
@@ -210,3 +223,34 @@ class FileData:
         #     new_cell_formula = new_cell_formula.replace(coord, coord.replace('2', str(row_number)))
         #
         # return new_cell_formula
+
+    @classmethod
+    def _convert_to_bytes(cls, wb: Workbook, filename: str):
+        if not Config.EXCEL_AVAILABLE:
+            wb_bytes = io.BytesIO()
+            wb.save(wb_bytes)
+            return wb_bytes.getvalue()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = os.path.join(temp_dir, f'temp-{filename}')
+            wb.save(temp_path)
+            cls._open_close_excel(temp_path)
+            with open(temp_path, 'rb') as temp_file:
+                return temp_file.read()
+
+    @classmethod
+    def _open_close_excel(cls, path):
+        """
+        Open and close excel to re-evaluate formula and cache results, which excel does ordinarily.
+        Quick fix solution, but will not work on linux, or if excel is not installed on machine.
+        Alternative is using a py library (pycel perhaps) to evaluate the formulas and return the results.
+        """
+        try:
+            pythoncom.CoInitialize()
+            excel_app = xlwings.App(visible=False)
+            excel_book = excel_app.books.open(path)
+            excel_book.save()
+            excel_book.close()
+            excel_app.quit()
+        except Exception:
+            traceback.print_exc()

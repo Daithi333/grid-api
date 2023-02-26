@@ -19,6 +19,9 @@ returning the new values.
 ### TODO
 
  - user preferences - custom column widths, sort, etc
- - formulas - how to display and edit, formula vs value
- - Date filters in views
- - Date support
+ - formulas - re-evaluate after a programmatic save - complex issue as openpyxl and other libraries do not evaluate formulas,
+   they simply read in a cached value from the last time the Excel was opened and saved. For now, if `EXCEL_AVAILABLE` flag is 
+   set, the code will use xlwings library to silently open and close the excel, which will reevaluate. If not available, the 
+   values of the formula cells will return empty. An alternative and more robust approach would be to always load the excel with 
+   default setting of `data_only=False`, which will return the formulas, and then use formula library like pycel to evaluate the
+   formula and then return the value in the row data as usual.

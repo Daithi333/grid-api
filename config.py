@@ -21,3 +21,6 @@ class Config:
         DB_POOL_SIZE = os.getenv('DB_POOL_SIZE', 10)
 
     FILE_CACHE_SIZE = int(os.getenv('CACHE_SIZE', 50))
+
+    # Excel required to reevaluate formula and cache their results
+    EXCEL_AVAILABLE = os.environ['EXCEL_AVAILABLE'] in ['1', 'true']
