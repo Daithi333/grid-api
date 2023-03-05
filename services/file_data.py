@@ -90,9 +90,10 @@ class FileData:
 
     @classmethod
     def apply_changes(cls, file: File, changes: List[Change]) -> bool:
-        """Apply transaction changes to the actual saved excel file.
-           Changes are applied in reverse row number order, so creates and deletes don't affect subsequent changes.
-           TODO - Other pending transactions will still be affected and need a solution.
+        """
+        Apply transaction changes to the actual saved excel file.
+        Changes are applied in reverse row number order, so creates and deletes don't affect subsequent changes.
+        TODO - Other pending transactions will still be affected and need a solution.
         """
         wb = cls._load_workbook(file.blob)
         ws = wb.active  # only get single (first) worksheet for now
@@ -105,6 +106,8 @@ class FileData:
                 cls._handle_delete(ws, change)
             else:  # update
                 cls._handle_update(ws, change, file.data_types)
+
+        cls._regenerate_formulas(ws, file.data_types)
 
         session = next(db.get_session())
         file_bytes = cls._convert_to_bytes(wb, file.name)
@@ -153,28 +156,39 @@ class FileData:
             else:
                 new_cell.value = new_value_str
 
-    @staticmethod
-    def _handle_delete(ws: Worksheet, change: Change):
-        """Delete row specified by change row_number, if data matches change before value"""
+    @classmethod
+    def _handle_delete(cls, ws: Worksheet, change: Change):
+        """
+        Delete row specified by change row_number, if data matches change before value
+        If data does not match, iterate backwards to find a matching row to delete.
+        TODO - Row insertions not supported yet, but logic would need to change to support those.
+        """
         deletion_row_number = change.row_number + 1
         header_cells = list(ws[1])
         row_cells = list(ws[deletion_row_number])
 
-        mismatches = []
+        if cls._is_match(header_cells, row_cells, change.before):
+            ws.delete_rows(deletion_row_number)
+        else:
+            print('Unable to delete row as it is not as expected.')
+            for alt_deletion_row_number in range(deletion_row_number-1, 2, -1):
+                row_cells = list(ws[alt_deletion_row_number])
+                if cls._is_match(header_cells, row_cells, change.before):
+                    ws.delete_rows(alt_deletion_row_number)
+                    print(f'Deleted row {alt_deletion_row_number} instead of {deletion_row_number} as data matched')
+                    break
+
+    @classmethod
+    def _is_match(cls, header_cells, row_cells, change_before) -> bool:
         for hc, rc in zip(header_cells, row_cells):
             excel_value = rc.value
             if rc.data_type in ['e', 'f']:
                 continue  # ignore value check on formula cells
             if rc.data_type == 'd':
                 excel_value = excel_value.strftime(DATE_FORMAT)
-            if excel_value != change.before[hc.value]:
-                mismatches.append({'column': hc.value, 'excel': excel_value, 'expected': change.before[hc.value]})
-
-        if mismatches:
-            print(f'Unable to delete row as it is not as expected. Mis-matches: {mismatches}')
-            raise Exception(f'Worksheet row to be deleted does not match change {change.id!r} deletion data')
-
-        ws.delete_rows(deletion_row_number)
+            if excel_value != change_before[hc.value]:
+                return False
+        return True
 
     @staticmethod
     def _handle_update(ws: Worksheet, change: Change, data_types: dict):
@@ -225,7 +239,20 @@ class FileData:
         # return new_cell_formula
 
     @classmethod
+    def _regenerate_formulas(cls, ws: Worksheet, data_types: dict):
+        for hc in list(ws[1]):
+            if data_types[hc.value] in ['e', 'f']:
+                column_letter = hc.column_letter
+                column_cells = list(ws[column_letter])
+                for i, cell in enumerate(column_cells[1:]):
+                    cell.value = cls._generate_cell_formula(ws, column_letter, i+2)
+                    # problems if row 2 deleted as it is used as baseline
+
+    @classmethod
     def _convert_to_bytes(cls, wb: Workbook, filename: str):
+        """Convert workbook to bytes for saving to database. If Excel is available, file will be opened and re-saved
+        in the background, to re-evaluate and the formula and cache the values for next load by openpyxl.
+        """
         if not Config.EXCEL_AVAILABLE:
             wb_bytes = io.BytesIO()
             wb.save(wb_bytes)
