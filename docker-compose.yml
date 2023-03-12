@@ -20,6 +20,7 @@ services:
       - DB_NAME=${DB_NAME}
       - LO_AVAILABLE=1
       - EXCEL_AVAILABLE=0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     depends_on:
       - excel-app-db
     command: bash -c "/usr/local/bin/wait-for-it excel-app-db:5432 --timeout=30 --strict -- python app.py"

@@ -10,7 +10,6 @@ from openpyxl.cell import ReadOnlyCell
 from openpyxl.formula.translate import Translator
 from openpyxl.worksheet.worksheet import Worksheet
 
-from config import Config
 from constants import DATE_FORMAT, DATE_STYLE
 from database import db
 from database.models import File, Change

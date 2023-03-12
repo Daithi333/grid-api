@@ -11,8 +11,11 @@ psycopg2 = {version = "*", platform_system  = "!= 'Linux'"}
 psycopg2-binary = { version = "*", platform_system  = "=='Linux'" }
 sqlalchemy = "*"
 xlwings = "*"
+bcrypt = "*"
+flask-jwt-extended = "*"
 
 [dev-packages]
+pytest = "*"
 
 [requires]
 python_version = "3.11"

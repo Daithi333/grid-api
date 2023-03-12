@@ -1,12 +1,12 @@
 import json
 from typing import List
 
-from sqlalchemy import Integer, Column, String, LargeBinary, ForeignKey, DateTime, func
+from sqlalchemy import Integer, Column, String, LargeBinary, ForeignKey, DateTime, func, Boolean, ForeignKeyConstraint
 from sqlalchemy.orm import declarative_base, relationship
 
 from database.column_types import (
     ENUM_FILTER_TYPE, ENUM_CHANGE_TYPE, ENUM_LOOKUP_OPERATOR,
-    ENUM_CONDITION_OPERATOR, ENUM_FILTER_OPERATOR, ENUM_APPROVAL_STATUS
+    ENUM_CONDITION_OPERATOR, ENUM_FILTER_OPERATOR, ENUM_APPROVAL_STATUS, ENUM_ROLE
 )
 
 DeclarativeBase = declarative_base()
@@ -40,7 +40,6 @@ class File(Base):
 class View(Base):
     __tablename__ = "view"
 
-    id = Column(Integer, primary_key=True)
     file_id = Column(Integer, ForeignKey('file.id'), nullable=False)
     name = Column(String, nullable=False)
     _fields = Column(String, nullable=False)
@@ -59,7 +58,6 @@ class View(Base):
 class Filter(Base):
     __tablename__ = "filter"
 
-    id = Column(Integer, primary_key=True)
     view_id = Column(Integer, ForeignKey('view.id'), nullable=False)
     field = Column(String, nullable=False)
     filter_type = Column(ENUM_FILTER_TYPE, nullable=False)
@@ -71,7 +69,6 @@ class Filter(Base):
 class Condition(Base):
     __tablename__ = "condition"
 
-    id = Column(Integer, primary_key=True)
     filter_id = Column(Integer, ForeignKey('filter.id'), nullable=False)
     operator = Column(ENUM_CONDITION_OPERATOR, nullable=False)
     value = Column(String, nullable=True)
@@ -80,7 +77,6 @@ class Condition(Base):
 class Lookup(Base):
     __tablename__ = "lookup"
 
-    id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     file_id = Column(Integer, ForeignKey('file.id'), nullable=False)
     field = Column(String, nullable=False)
@@ -92,23 +88,28 @@ class Lookup(Base):
 class Transaction(Base):
     __tablename__ = "transaction"
 
-    id = Column(Integer, primary_key=True)
     file_id = Column(Integer, ForeignKey('file.id'), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    user_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     status = Column(ENUM_APPROVAL_STATUS, nullable=False)
     notes = Column(String)
     approved_at = Column(DateTime(timezone=True), onupdate=func.now())
-    approver_id = Column(Integer)
+    approver_id = Column(Integer, ForeignKey('user.id'))
 
-    changes = relationship('Change', backref="transaction", cascade='all, delete')
+    changes = relationship('Change', back_populates="transaction", cascade='all, delete')
     file = relationship('File', back_populates="transactions")
+    user = relationship('User', foreign_keys=[user_id])
+    approver = relationship('User', foreign_keys=[approver_id])
+
+    __table_args__ = (
+        ForeignKeyConstraint([user_id], ['user.id']),
+        ForeignKeyConstraint([approver_id], ['user.id'])
+    )
 
 
 class Change(Base):
     __tablename__ = "change"
 
-    id = Column(Integer, primary_key=True)
     transaction_id = Column(Integer, ForeignKey('transaction.id'), nullable=False)
     change_type = Column(ENUM_CHANGE_TYPE, nullable=False)
     row_number = Column(Integer, nullable=False)
@@ -130,3 +131,26 @@ class Change(Base):
     @after.setter
     def after(self, after: dict):
         self._after = json.dumps(after)
+
+    transaction = relationship("Transaction", back_populates="changes")
+
+
+class User(Base):
+    __tablename__ = "user"
+
+    firstname = Column(String, nullable=False)
+    lastname = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+    password_hash = Column(String, nullable=False)
+    temp_password = Column(Boolean, nullable=False, default=False)
+
+
+class Permission(Base):
+    __tablename__ = "permission"
+
+    file_id = Column(Integer, ForeignKey('file.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    role = Column(ENUM_ROLE, nullable=False)
+
+    file = relationship('File', backref="permissions")
+    user = relationship('User', backref="permissions")

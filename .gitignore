@@ -5,8 +5,7 @@ __pycache__/
 .idea/
 
 # db
-demo-db.sqlite
-demo-db.db
+demo.db
 
 # local env
 .env

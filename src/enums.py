@@ -46,3 +46,9 @@ class ApprovalStatus(enum.Enum):
     AUTO_APPROVED = enum.auto()
     CHANGES_REQUESTED = enum.auto()
     REJECTED = enum.auto()
+
+
+class Role(enum.Enum):
+    OWNER = enum.auto()
+    CONTRIBUTOR = enum.auto()
+    VIEWER = enum.auto()

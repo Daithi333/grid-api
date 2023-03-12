@@ -62,7 +62,7 @@ def update_file():
     session.commit()
     file_cache.remove(str(file_.id))
 
-    return {"id": file_.id}
+    return _file_to_dict(file_)
 
 
 @files.get("")

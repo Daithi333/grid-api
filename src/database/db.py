@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from sqlite3.dbapi2 import OperationalError
 
 from sqlalchemy import create_engine, text
@@ -7,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from database.models import DeclarativeBase
 
 
-class Database:
+class Database(ABC):
     engine: Engine = None
     session_maker: sessionmaker = None
 
@@ -20,6 +21,25 @@ class Database:
         yield session
         session.close()
 
+    def create_schema(self):
+        DeclarativeBase.metadata.create_all(self.engine)
+
+    def drop_schema(self):
+        DeclarativeBase.metadata.drop_all(self.engine)
+
+    @classmethod
+    @abstractmethod
+    def _create_engine(cls, db_uri: str, **kwargs) -> Engine:
+        raise NotImplementedError
+
+
+class SqliteDatabase(Database):
+    @classmethod
+    def _create_engine(cls, db_uri: str, **kwargs) -> Engine:
+        return create_engine(db_uri, **kwargs)
+
+
+class PostgresDatabase(Database):
     @classmethod
     def _create_engine(cls, db_uri: str, **kwargs) -> Engine:
         """Create engine against existing db or create the db first if it doesn't yet exist"""
@@ -42,14 +62,4 @@ class Database:
             engine = create_engine(db_uri, **kwargs)
             conn = engine.connect()
             conn.close()
-            engine = create_engine(db_uri, **kwargs)
-            cls._create_schema(engine)
-            return engine
-
-    @classmethod
-    def _create_schema(cls, engine):
-        DeclarativeBase.metadata.create_all(engine)
-
-    @classmethod
-    def _drop_schema(cls, engine):
-        DeclarativeBase.metadata.drop_all(engine)
+            return create_engine(db_uri, **kwargs)

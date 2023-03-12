@@ -17,11 +17,13 @@ returning the new values.
 
 
 ### TODO
-- user preferences - custom column widths, sort, etc
-- formulas - re-evaluate after a programmatic save
+- user preferences for Grid view - custom column widths, saved sort, etc
 - improve row numbers handling - row numbers are not fixed, so deletions in one transaction will invalidate row numbers 
   in other transactions. Better solution is needed, but for now it just iterates through previous rows to find a match.
 - Add functionality for row insertions
+- Enforce unique file name
+- user signup, login
+- enforce permissions for queries, ie only return wha the user should see
 
 
 ### Run app
