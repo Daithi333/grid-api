@@ -1,9 +1,12 @@
 from flask import Flask, request
 from flask_cors import CORS
 
+from logger import init_root_logger
 from services import file_cache
 from error import NotFoundError, BadRequestError, handle_not_found, handle_bad_request
 from routes import files, views, lookups, transactions
+
+init_root_logger()
 
 app = Flask(__name__)
 app.register_blueprint(files)

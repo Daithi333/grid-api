@@ -7,3 +7,9 @@ __pycache__/
 # db
 demo-db.sqlite
 demo-db.db
+
+# local env
+.env
+
+# docker
+pgdata/

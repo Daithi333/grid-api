@@ -21,7 +21,6 @@ class FileCache(LRUCache):
         return str(file_id)
 
 
-# @lru_cache(maxsize=Config.FILE_CACHE_SIZE)
 @FileCache
 def load_excel(file: File) -> List[List[ReadOnlyCell]]:
     file_bytes = io.BytesIO(file.blob)

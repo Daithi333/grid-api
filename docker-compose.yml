@@ -1,0 +1,35 @@
+version: "3.11"
+
+services:
+  excel-app:
+    image: excel-app:local
+    container_name: excel-app
+    build:
+      context: ./
+      dockerfile: ./docker/Dockerfile
+    ports:
+      - 5000:5000
+    expose:
+      - 5000
+    environment:
+      - DB_ENGINE=${DB_ENGINE}
+      - LO_AVAILABLE=${LO_AVAILABLE}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+    depends_on:
+      - excel-app-db
+
+  excel-app-db:
+    image: postgres:15.2
+    container_name: excel-app-db
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
