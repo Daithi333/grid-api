@@ -21,6 +21,6 @@ class Config:
         DB_URL = f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
     LO_AVAILABLE = os.environ['LO_AVAILABLE'] in ['1', 'true']
-    LO_SLEEP = 2
+    EXCEL_AVAILABLE = os.environ['EXCEL_AVAILABLE'] in ['1', 'true']
 
     FILE_CACHE_SIZE = int(os.getenv('CACHE_SIZE', 50))

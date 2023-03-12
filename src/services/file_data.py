@@ -255,15 +255,11 @@ class FileData:
 
     @classmethod
     def _convert_to_bytes(cls, wb: Workbook, filename: str):
-        """Convert workbook to bytes for saving into database. If LibreOffice is available, file will be opened, saved
-        and closed in the background, to re-evaluate and the formula and cache the values for next load by openpyxl.
+        """Convert workbook to bytes for saving into database. Will attempt to open-close the excel to evaluate
+        the formulas and cache the results, which differs per OS and requires MS Excel or LibreOffice installation.
+        Future alternative could be to use a python library to evaluate all the formulas when data is being returned.
         """
         log.info('Converting workbook to bytes')
-        if not Config.LO_AVAILABLE:
-            wb_bytes = io.BytesIO()
-            wb.save(wb_bytes)
-            return wb_bytes.getvalue()
-
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = os.path.join(temp_dir, f'temp-{filename}')
             wb.save(temp_path)
