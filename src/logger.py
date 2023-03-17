@@ -1,6 +1,6 @@
 import logging
 
-FORMAT = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+FORMAT = '%(asctime)-20s | %(name)-20s | %(levelname)-8s | %(message)s'
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 LEVEL = logging.INFO
 

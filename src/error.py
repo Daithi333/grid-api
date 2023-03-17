@@ -1,23 +1,31 @@
 
-class NotFoundError(Exception):
+class APIError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def as_dict(self):
+        return self.__dict__
+
+
+class NotFoundError(APIError):
     pass
 
 
-class BadRequestError(Exception):
+class BadRequestError(APIError):
     pass
 
 
-class UnauthorizedError(Exception):
+class UnauthorizedError(APIError):
     pass
 
 
 def handle_not_found(e):
-    return {'message': str(e)}, 404
+    return e.as_dict(), 404
 
 
 def handle_bad_request(e):
-    return {'message': str(e)}, 400
+    return e.as_dict(), 400
 
 
 def handle_unauthorized(e):
-    return {'message': str(e)}, 401
+    return e.as_dict(), 401

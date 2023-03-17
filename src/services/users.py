@@ -3,7 +3,7 @@ import re
 import bcrypt
 
 from constants import EMAIL_REGEX, PASSWORD_REGEX
-from database import db
+from database import db_session
 from database.models import User
 from error import BadRequestError, UnauthorizedError
 
@@ -12,7 +12,7 @@ class UserService:
 
     @classmethod
     def signup(cls, email: str, password: str, firstname: str, lastname: str):
-        session = next(db.get_session())
+        session = db_session.get()
         if not cls.valid_email_format(email):
             raise BadRequestError('Invalid email format')
 
@@ -35,7 +35,7 @@ class UserService:
 
     @classmethod
     def login(cls, email: str, password: str) -> dict:
-        session = next(db.get_session())
+        session = db_session.get()
         user = session.query(User).filter_by(email=email).one_or_none()
         if not user:
             raise UnauthorizedError('User does not exist')

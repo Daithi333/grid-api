@@ -5,6 +5,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
 from config import Config
+from database import init_db_session, teardown_db_session
 from logger import init_root_logger
 from services import file_cache
 from error import NotFoundError, BadRequestError, handle_not_found, handle_bad_request
@@ -51,3 +52,13 @@ def clear_from_cache():
         message = 'File cache cleared'
 
     return {'success': success, 'message': message}
+
+
+@app.before_request
+def before_request():
+    init_db_session()
+
+
+@app.teardown_request
+def teardown_request(exception=None):
+    teardown_db_session()

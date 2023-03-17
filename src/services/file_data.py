@@ -11,19 +11,21 @@ from openpyxl.formula.translate import Translator
 from openpyxl.worksheet.worksheet import Worksheet
 
 from constants import DATE_FORMAT, DATE_STYLE
-from database import db
+from database import db_session
 from database.models import File, Change
-from services import file_cache
+from services import file_cache, FileService
 from enums import ChangeType
 from util.subprocess import open_close_excel
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
-class FileData:
+class FileDataService:
 
     @classmethod
-    def get_data(cls, file: File) -> dict:
+    def get_data(cls, id_: str) -> dict:
+        file = FileService.get(id_=id_, internal=True)
+
         cells: List[List[ReadOnlyCell]] = file_cache.load_excel(file)
         data_types = file.data_types
 
@@ -95,7 +97,7 @@ class FileData:
         Changes are applied in reverse row number order, so creates and deletes don't affect subsequent changes.
         TODO - Other pending transactions will still be affected and need a solution.
         """
-        log.info('Apply changes to workbook - begin')
+        logger.info('Apply changes to workbook - begin')
         wb = cls._load_workbook(file.blob)
         ws = wb.active  # only get single (first) worksheet for now
 
@@ -110,13 +112,13 @@ class FileData:
 
         cls._regenerate_formulas(ws, file.data_types)
 
-        session = next(db.get_session())
+        session = db_session.get()
         file_bytes = cls._convert_to_bytes(wb, file.name)
-        log.info('Converted workbook to bytes')
+        logger.info('Converted workbook to bytes')
         file.blob = file_bytes
         session.commit()
         file_cache.remove(str(file.id))  # remove old version of file data from cache
-        log.info('Apply changes to workbook - complete')
+        logger.info('Apply changes to workbook - complete')
         return True
 
     @classmethod
@@ -129,7 +131,7 @@ class FileData:
     @classmethod
     def _handle_create(cls, ws: Worksheet, change: Change, data_types: dict):
         """Add a new row to the end of a spreadsheet"""
-        log.info('Create new row - begin')
+        logger.info('Create new row - begin')
         new_row_number = ws.max_row + 1
         new_row_data = change.after
         header_cells = list(ws[1])
@@ -159,7 +161,7 @@ class FileData:
                 new_cell.value = new_value
             else:
                 new_cell.value = new_value_str
-        log.info('Create new row - complete')
+        logger.info('Create new row - complete')
 
     @classmethod
     def _handle_delete(cls, ws: Worksheet, change: Change):
@@ -168,7 +170,7 @@ class FileData:
         If data does not match, iterate backwards to find a matching row to delete.
         TODO - Row insertions not supported yet, but logic would need to change to support those.
         """
-        log.info('Delete new row - begin')
+        logger.info('Delete new row - begin')
         deletion_row_number = change.row_number + 1
         header_cells = list(ws[1])
         row_cells = list(ws[deletion_row_number])
@@ -183,7 +185,7 @@ class FileData:
                     ws.delete_rows(alt_deletion_row_number)
                     print(f'Deleted row {alt_deletion_row_number} instead of {deletion_row_number} as data matched')
                     break
-        log.info('Delete new row - complete')
+        logger.info('Delete new row - complete')
 
     @classmethod
     def _is_match(cls, header_cells, row_cells, change_before) -> bool:
@@ -200,7 +202,7 @@ class FileData:
     @staticmethod
     def _handle_update(ws: Worksheet, change: Change, data_types: dict):
         """Update an existing row in the spreadsheet"""
-        log.info('Update new row - begin')
+        logger.info('Update new row - begin')
         update_row_number = change.row_number + 1
         header_cells = list(ws[1])
         row_cells = list(ws[update_row_number])
@@ -229,7 +231,7 @@ class FileData:
                 update_cell.number_format = DATE_STYLE
             else:
                 update_cell.value = updated_value_str
-        log.info('Update new row - complete')
+        logger.info('Update new row - complete')
 
     @classmethod
     def _generate_cell_formula(cls, ws: Worksheet, column_letter: str, row_number: int) -> str:
@@ -242,7 +244,7 @@ class FileData:
 
     @classmethod
     def _regenerate_formulas(cls, ws: Worksheet, data_types: dict):
-        log.info('Regenerate cell formulas - begin')
+        logger.info('Regenerate cell formulas - begin')
         for hc in list(ws[1]):
             if data_types[hc.value] in ['e', 'f']:
                 column_letter = hc.column_letter
@@ -250,7 +252,7 @@ class FileData:
                 for i, cell in enumerate(column_cells[1:]):
                     cell.value = cls._generate_cell_formula(ws, column_letter, i+2)
                     # problems if row 2 deleted as it is used as baseline
-        log.info('Regenerate cell formulas - complete')
+        logger.info('Regenerate cell formulas - complete')
 
     @classmethod
     def _convert_to_bytes(cls, wb: Workbook, filename: str):
@@ -258,7 +260,7 @@ class FileData:
         the formulas and cache the results, which differs per OS and requires MS Excel or LibreOffice installation.
         Future alternative could be to use a python library to evaluate all the formulas when data is being returned.
         """
-        log.info('Converting workbook to bytes')
+        logger.info('Converting workbook to bytes')
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = os.path.join(temp_dir, f'temp-{filename}')
             wb.save(temp_path)

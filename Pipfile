@@ -13,6 +13,7 @@ sqlalchemy = "*"
 xlwings = "*"
 bcrypt = "*"
 flask-jwt-extended = "*"
+contextvars = "*"
 
 [dev-packages]
 pytest = "*"

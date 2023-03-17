@@ -1,11 +1,7 @@
-import io
-
 from flask import Blueprint, request, jsonify, send_file
 
-from database import db
-from database.models import File
-from services import file_cache
-from services.file_data import FileData
+from error import BadRequestError
+from services import FileDataService, FileService
 
 files = Blueprint('files', __name__, url_prefix='/files')
 
@@ -14,112 +10,66 @@ files = Blueprint('files', __name__, url_prefix='/files')
 def add_file():
     file = request.files.get('file')
     if not file:
-        return {'message': 'file not found in request'}, 400
-    content_type_full = file.content_type
-    content_type = content_type_full.split('.')[0]
-    if content_type not in ['application/vnd']:
-        return {'message': f'unsupported file type {content_type!r}'}, 400
+        raise BadRequestError(message='file not found in request')
 
-    session = next(db.get_session())
+    filename = file.filename
+    content_type = file.content_type
     file_bytes = file.read()
-    data_types = FileData.get_data_types(file_bytes)
-    file_ = File(blob=file_bytes, name=file.filename, content_type=content_type_full, data_types=data_types)
-    session.add(file_)
-    session.commit()
-    session.refresh(file_)
-
-    return _file_to_dict(file_)
+    data_types = FileDataService.get_data_types(file_bytes)
+    return FileService.create(file_bytes, filename, content_type, data_types)
 
 
 @files.put("")
 def update_file():
     file_id = request.args.get('id')
     if not file_id:
-        return {'message': 'id not provided in request'}, 400
+        raise BadRequestError(message='id not found in request')
 
     file = request.files.get('file')
     if not file:
-        return {'message': 'file not found in request'}, 400
+        raise BadRequestError(message='file not found in request')
 
-    content_type_full = file.content_type
-    content_type = content_type_full.split('.')[0]
-    if content_type not in ['application/vnd']:
-        return {'message': f'unsupported file type {content_type!r}'}, 400
-
-    session = next(db.get_session())
-    file_ = session.query(File).filter_by(id=file_id).one_or_none()
-    if not file_:
-        return {'message': f'file {file_id!r} not found'}, 404
-
-    file_.blob = file.read()
-    file_.name = file.filename
-    file_.content_type = content_type_full
-    file_.data_types = FileData.get_data_types(file_.blob)
-
-    for t in file_.transactions:
-        session.delete(t)
-
-    session.commit()
-    file_cache.remove(str(file_.id))
-
-    return _file_to_dict(file_)
+    filename = file.filename
+    content_type = file.content_type
+    file_bytes = file.read()
+    data_types = FileDataService.get_data_types(file_bytes)
+    return FileService.update(file_id, file_bytes, filename, content_type, data_types)
 
 
 @files.get("")
 def get_files():
-    session = next(db.get_session())
-
     file_id = request.args.get('id')
-
     if file_id:
-        file = session.query(File).filter_by(id=file_id).one_or_none()
-        if not file:
-            return {'message': f'file {file_id!r} not found'}, 404
-
-        return _file_to_dict(file)
-
-    files_ = session.query(File).all()
-    return jsonify([_file_to_dict(f) for f in files_])
-
-
-def _file_to_dict(file: File):
-    return {'id': file.id, 'name': file.name, 'content_type': file.content_type, 'size_bytes ': len(file.blob)}
+        return FileService.get(id_=file_id)
+    else:
+        files_ = FileService.list()
+        return jsonify(files_)
 
 
 @files.delete("")
 def delete_file():
     file_id = request.args.get('id')
     if not file_id:
-        return {'message': 'id not provided in request'}, 400
+        raise BadRequestError(message='id not found in request')
 
-    with next(db.get_session()) as session:
-        session.query(File).filter_by(id=file_id).delete()
-        session.commit()
-    return {'success': True}
+    success = FileService.delete(id_=file_id)
+    return {'success': success}
 
 
 @files.get("/download")
 def download_file():
     file_id = request.args.get('id')
     if not file_id:
-        return {'message': 'id not provided in request'}, 400
+        raise BadRequestError(message='id not found in request')
 
-    with next(db.get_session()) as session:
-        file = session.query(File).filter_by(id=file_id).one()
-
-    blob = io.BytesIO(file.blob)
-    return send_file(blob, mimetype=file.content_type, as_attachment=True, download_name=file.name)
+    blob, filename, content_type = FileService.download(id_=file_id)
+    return send_file(blob, mimetype=content_type, as_attachment=True, download_name=filename)
 
 
 @files.get("/data")
 def get_file_data():
     file_id = request.args.get('id')
     if not file_id:
-        return {'message': 'file id not found in request'}, 400
+        raise BadRequestError(message='id not found in request')
 
-    session = next(db.get_session())
-    file = session.query(File).filter_by(id=file_id).one_or_none()
-    if not file:
-        return {'message': f'file {file_id} not found'}, 404
-
-    return FileData.get_data(file)
+    return FileDataService.get_data(id_=file_id)

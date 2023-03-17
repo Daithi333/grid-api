@@ -1,12 +1,7 @@
-import traceback
-
 from flask import Blueprint, request, jsonify
 
-from database import db
-from database.models import Transaction, Change
-from enums import ChangeType, ApprovalStatus
 from error import BadRequestError
-from services.file_data import FileData
+from services import TransactionService
 
 transactions = Blueprint('transactions', __name__, url_prefix='/transactions')
 
@@ -15,120 +10,51 @@ transactions = Blueprint('transactions', __name__, url_prefix='/transactions')
 def add_transaction():
     file_id = request.json.get('fileId')
     changes_data = request.json.get('changes', [])
-    user_id = 1
+    user_id = '1'
 
     if not file_id:
-        return {'message': 'file id not found in request'}, 400
+        raise BadRequestError(message='file id not found in request')
 
     if not changes_data:
-        return {'message': 'changes not found in request'}, 400
+        raise BadRequestError(message='changes not found in request')
 
-    changes = [
-        Change(
-            change_type=ChangeType(c['changeType']),
-            row_number=c['rowNumber'],
-            before=c.get('before'),
-            after=c.get('after')
-        )
-        for c in changes_data
-    ]
-    transaction = Transaction(file_id=file_id, user_id=user_id, status=ApprovalStatus.PENDING, changes=changes)
-
-    session = next(db.get_session())
-    session.add(transaction)
-    session.commit()
-    session.refresh(transaction)
-
-    return {"id": transaction.id}
+    return TransactionService.create(file_id, user_id, changes_data)
 
 
 @transactions.get("")
 def get_transactions():
-    session = next(db.get_session())
     file_id = request.args.get('fileId')
     if not file_id:
-        return {'message': 'file id not found in request'}, 404
+        raise BadRequestError(message='file id not found in request')
 
     transaction_id = request.args.get('id')
-
     if transaction_id:
-        transaction = session.query(Transaction).filter_by(id=transaction_id).one_or_none()
-        if not transaction:
-            return {'message': f'transaction {transaction_id} not found'}, 404
-
-        return _transaction_to_dict(transaction)
-
+        return TransactionService.get(id_=transaction_id)
     else:
-        transactions_ = session.query(Transaction).filter_by(file_id=file_id).all()
-        return jsonify([_transaction_to_dict(t) for t in transactions_])
+        transactions_ = TransactionService.list(file_id=file_id)
+        return jsonify(transactions_)
 
 
 @transactions.put("")
 def update_transaction():
     transaction_id = request.args.get('id')
     if not transaction_id:
-        return {'message': 'id not provided in request'}, 400
+        raise BadRequestError(message='id not found in request')
 
     status = request.json.get('status')
     notes = request.json.get('notes')
 
     if not status:
-        return {'message': 'status not provided in request'}, 400
+        raise BadRequestError(message='status not found in request')
 
-    session = next(db.get_session())
-    transaction = session.query(Transaction).filter_by(id=transaction_id).one_or_none()
-    if not transaction:
-        return {'message': f'Transaction {transaction_id!r} not found'}, 404
-
-    transaction.status = ApprovalStatus[status]
-    if transaction.status == ApprovalStatus.APPROVED:
-        try:
-            FileData.apply_changes(transaction.file, transaction.changes)
-        except Exception as e:
-            traceback.print_exc()
-            raise BadRequestError(f'unable to apply changes in transaction {transaction_id}: {e}')
-
-        transaction.user_id = '2'
-    transaction.notes = notes
-
-    session.commit()
-    return _transaction_to_dict(transaction)
-
-
-def _transaction_to_dict(transaction: Transaction) -> dict:
-    return {
-        'id': transaction.id,
-        'fileId': transaction.file_id,
-        'createdAt': transaction.created_at,
-        'userId': transaction.user_id,
-        'status': transaction.status.name,
-        'notes': transaction.notes,
-        'approvedAt': transaction.approved_at,
-        'approverId': transaction.approver_id,
-        'changes': [
-            {
-                'id': c.id,
-                'changeType': c.change_type.value,
-                'rowNumber': c.row_number,
-                'before': c.before,
-                'after': c.after
-            }
-            for c in transaction.changes
-        ]
-    }
+    return TransactionService.update(transaction_id, status, notes)
 
 
 @transactions.delete("")
 def delete_transaction():
     transaction_id = request.args.get('id')
     if not transaction_id:
-        return {'message': 'id not found in request'}, 400
+        raise BadRequestError(message='id not found in request')
 
-    session = next(db.get_session())
-    transaction = session.query(Transaction).filter_by(id=transaction_id).one_or_none()
-    if not transaction:
-        return {'message': f'Transaction {transaction_id!r} not found'}, 404
-
-    session.delete(transaction)
-    session.commit()
-    return {'success': True}
+    success = TransactionService.delete(id_=transaction_id)
+    return {'success': success}

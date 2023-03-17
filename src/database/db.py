@@ -10,16 +10,14 @@ from database.models import DeclarativeBase
 
 class Database(ABC):
     engine: Engine = None
-    session_maker: sessionmaker = None
+    SessionMaker: sessionmaker = None
 
     def __init__(self, url: str, **kwargs):
         self.engine = self._create_engine(url, **kwargs)
-        self.session_maker = sessionmaker(self.engine)
+        self.SessionMaker = sessionmaker(self.engine)
 
     def get_session(self):
-        session = self.session_maker()
-        yield session
-        session.close()
+        return self.SessionMaker()
 
     def create_schema(self):
         DeclarativeBase.metadata.create_all(self.engine)
