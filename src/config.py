@@ -23,6 +23,7 @@ class Config:
     LO_AVAILABLE = os.getenv('LO_AVAILABLE') in ['1', 'true']
     EXCEL_AVAILABLE = os.getenv('EXCEL_AVAILABLE') in ['1', 'true']
 
+    MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', 10))
     FILE_CACHE_SIZE = int(os.getenv('CACHE_SIZE', 50))
 
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')

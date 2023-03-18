@@ -44,7 +44,7 @@ class TransactionService:
         return cls._transaction_to_dict(transaction)
 
     @classmethod
-    def update(cls, id_: str, status: str, notes: str = None):
+    def update(cls, id_: str, user_id: str, status: str, notes: str = None):
         session = db_session.get()
         transaction = cls.get(id_=id_, internal=True)
 
@@ -56,7 +56,7 @@ class TransactionService:
                 traceback.print_exc()
                 raise BadRequestError(f'unable to apply changes in transaction {id_}: {e}')
 
-            transaction.approver_id = '2'
+            transaction.approver_id = user_id
 
         if notes:
             transaction.notes = notes

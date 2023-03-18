@@ -52,4 +52,5 @@ def login():
 def refresh():
     identity = get_jwt_identity()
     access_token = create_access_token(identity=identity)
-    return jsonify(access_token=access_token)
+    expiration_time = int((datetime.utcnow() + timedelta(hours=Config.JWT_ACCESS_TOKEN_EXPIRES)).timestamp() * 1000)
+    return jsonify(access_token=access_token, expires_at=expiration_time)

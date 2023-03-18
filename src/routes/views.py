@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 
 from error import BadRequestError
 from services.views import ViewService
@@ -7,6 +8,7 @@ views = Blueprint('views', __name__, url_prefix='/views')
 
 
 @views.post("")
+@jwt_required()
 def add_view():
     file_id = request.json.get('fileId')
     name = request.json.get('name')
@@ -23,6 +25,7 @@ def add_view():
 
 
 @views.get("")
+@jwt_required()
 def get_views():
     file_id = request.args.get('fileId')
     if not file_id:
@@ -37,6 +40,7 @@ def get_views():
 
 
 @views.delete("")
+@jwt_required()
 def delete_view():
     view_id = request.args.get('id')
     if not view_id:

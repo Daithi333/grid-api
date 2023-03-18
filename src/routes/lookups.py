@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required
 
 from error import BadRequestError
 from services.lookups import LookupService
@@ -7,6 +8,7 @@ lookups = Blueprint('lookups', __name__, url_prefix='/lookups')
 
 
 @lookups.post("")
+@jwt_required()
 def add_lookup():
     file_id = request.json.get('fileId')
     field = request.json.get('lookupField')
@@ -22,6 +24,7 @@ def add_lookup():
 
 
 @lookups.get("")
+@jwt_required()
 def get_lookups():
     file_id = request.args.get('fileId')
     if not file_id:
@@ -38,6 +41,7 @@ def get_lookups():
 
 
 @lookups.delete("")
+@jwt_required()
 def delete_lookup():
     lookup_id = request.args.get('id')
     if not lookup_id:

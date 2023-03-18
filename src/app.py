@@ -2,13 +2,16 @@ from datetime import timedelta
 
 from flask import Flask, request
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, jwt_required
 
 from config import Config
 from database import init_db_session, teardown_db_session
 from logger import init_root_logger
 from services import file_cache
-from error import NotFoundError, BadRequestError, handle_not_found, handle_bad_request
+from error import (
+    NotFoundError, BadRequestError, handle_not_found, handle_bad_request,
+    UnauthorizedError, handle_unauthorized
+)
 from routes import files, views, lookups, transactions, users
 
 init_root_logger()
@@ -22,12 +25,14 @@ app.register_blueprint(users)
 
 app.register_error_handler(NotFoundError, handle_not_found)
 app.register_error_handler(BadRequestError, handle_bad_request)
+app.register_error_handler(UnauthorizedError, handle_unauthorized)
 
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 app.config["JWT_SECRET_KEY"] = Config.JWT_SECRET_KEY
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=Config.JWT_ACCESS_TOKEN_EXPIRES)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=Config.JWT_REFRESH_TOKEN_EXPIRES)
+app.config['MAX_CONTENT_LENGTH'] = Config.MAX_FILE_SIZE_MB * 1024 * 1024  # 16 MB
 jwt = JWTManager(app)
 
 
@@ -37,11 +42,13 @@ def read_root():
 
 
 @app.get("/cache")
+@jwt_required()
 def get_cache_summary():
     return file_cache.summary()
 
 
 @app.delete("/cache")
+@jwt_required()
 def clear_from_cache():
     file_id = request.args.get('id')
     if file_id:

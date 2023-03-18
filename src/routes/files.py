@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify, send_file
+from flask_jwt_extended import jwt_required
 
 from error import BadRequestError
 from services import FileDataService, FileService
@@ -7,6 +8,7 @@ files = Blueprint('files', __name__, url_prefix='/files')
 
 
 @files.post("")
+@jwt_required()
 def add_file():
     file = request.files.get('file')
     if not file:
@@ -20,6 +22,7 @@ def add_file():
 
 
 @files.put("")
+@jwt_required()
 def update_file():
     file_id = request.args.get('id')
     if not file_id:
@@ -37,6 +40,7 @@ def update_file():
 
 
 @files.get("")
+@jwt_required()
 def get_files():
     file_id = request.args.get('id')
     if file_id:
@@ -47,6 +51,7 @@ def get_files():
 
 
 @files.delete("")
+@jwt_required()
 def delete_file():
     file_id = request.args.get('id')
     if not file_id:
@@ -57,6 +62,7 @@ def delete_file():
 
 
 @files.get("/download")
+@jwt_required()
 def download_file():
     file_id = request.args.get('id')
     if not file_id:
@@ -67,6 +73,7 @@ def download_file():
 
 
 @files.get("/data")
+@jwt_required()
 def get_file_data():
     file_id = request.args.get('id')
     if not file_id:
