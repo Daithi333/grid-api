@@ -17,6 +17,7 @@ def signup():
     password = request.form.get('password')
     firstname = request.form.get('firstname')
     lastname = request.form.get('lastname')
+
     if any(param is None for param in [email, password, firstname, lastname]):
         raise BadRequestError('missing fields for signup')
 

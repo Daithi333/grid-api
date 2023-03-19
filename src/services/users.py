@@ -13,6 +13,7 @@ class UserService:
     @classmethod
     def signup(cls, email: str, password: str, firstname: str, lastname: str):
         session = db_session.get()
+
         if not cls.valid_email_format(email):
             raise BadRequestError('Invalid email format')
 
@@ -21,6 +22,10 @@ class UserService:
                 'Insufficient password complexity. Must be at least 8 characters long, '
                 'with 1 uppercase letter, 1 lowercase letter, 1 special character and 1 number'
             )
+
+        user = session.query(User).filter_by(email=email).one_or_none()
+        if user:
+            raise BadRequestError('Email address is already registered')
 
         user = User(
             firstname=firstname,

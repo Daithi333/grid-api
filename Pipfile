@@ -7,8 +7,7 @@ name = "pypi"
 flask = "*"
 flask-cors = "*"
 openpyxl = "==3.1.0"  # bug in versions 3.1.1 and 3.1.2
-psycopg2 = {version = "*", platform_system  = "!= 'Linux'"}
-psycopg2-binary = { version = "*", platform_system  = "=='Linux'" }
+psycopg2 = "*"
 sqlalchemy = "*"
 xlwings = "*"
 bcrypt = "*"

@@ -26,7 +26,7 @@ services:
     command: bash -c "/usr/local/bin/wait-for-it excel-app-db:5432 --timeout=30 --strict -- python app.py"
 
   excel-app-db:
-    image: postgres:15.2
+    image: postgres
     container_name: excel-app-db
     ports:
       - 5432:5432
