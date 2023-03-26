@@ -2,7 +2,7 @@ import base64
 from datetime import timedelta, datetime
 
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, decode_token
 
 from config import Config
 from error import BadRequestError, UnauthorizedError
@@ -36,9 +36,12 @@ def login():
     email, password = auth_str.split(':')
     user = UserService.login(email, password)
 
-    expiration_time = int((datetime.utcnow() + timedelta(hours=Config.JWT_ACCESS_TOKEN_EXPIRES)).timestamp() * 1000)
-    access_token = create_access_token(identity=user)
+    expires_delta = timedelta(hours=Config.JWT_ACCESS_TOKEN_EXPIRES)
+    access_token = create_access_token(identity=user, expires_delta=expires_delta)
     refresh_token = create_refresh_token(identity=user)
+
+    decoded_token = decode_token(access_token)
+    expiration_time = decoded_token["exp"] * 1000
 
     return jsonify(
         access_token=access_token,
