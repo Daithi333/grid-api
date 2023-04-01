@@ -11,21 +11,31 @@ from error import BadRequestError, UnauthorizedError
 class UserService:
 
     @classmethod
+    def get(cls, id_: str = None, email: str = None) -> User or None:
+        filters = {}
+        if id_:
+            filters['id'] = id_
+        if email:
+            filters['email'] = email
+
+        session = db_session.get()
+        return session.query(User).filter_by(**filters).one_or_none()
+
+    @classmethod
     def signup(cls, email: str, password: str, firstname: str, lastname: str):
         session = db_session.get()
 
         if not cls.valid_email_format(email):
             raise BadRequestError('Invalid email format')
 
+        if cls.get(email=email) is not None:
+            raise BadRequestError('Email address is already registered')
+
         if not cls.valid_password_format(password):
             raise BadRequestError(
                 'Insufficient password complexity. Must be at least 8 characters long, '
                 'with 1 uppercase letter, 1 lowercase letter, 1 special character and 1 number'
             )
-
-        user = session.query(User).filter_by(email=email).one_or_none()
-        if user:
-            raise BadRequestError('Email address is already registered')
 
         user = User(
             firstname=firstname,

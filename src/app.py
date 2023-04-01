@@ -12,7 +12,7 @@ from error import (
     NotFoundError, BadRequestError, handle_not_found, handle_bad_request,
     UnauthorizedError, handle_unauthorized
 )
-from routes import files, views, lookups, transactions, users
+from routes import files, views, lookups, transactions, users, permissions
 
 init_root_logger()
 
@@ -22,6 +22,7 @@ app.register_blueprint(views)
 app.register_blueprint(lookups)
 app.register_blueprint(transactions)
 app.register_blueprint(users)
+app.register_blueprint(permissions)
 
 app.register_error_handler(NotFoundError, handle_not_found)
 app.register_error_handler(BadRequestError, handle_bad_request)
