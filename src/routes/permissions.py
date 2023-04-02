@@ -2,8 +2,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from decorators import jwt_user_required
-from error import BadRequestError
-from services import PermissionService
+from error import BadRequestError, NotFoundError
+from services import PermissionService, UserService
 
 permissions = Blueprint('permissions', __name__, url_prefix='/permissions')
 
@@ -41,10 +41,13 @@ def add_permission():
     file_id = request.json.get('fileId')
     email = request.json.get('email')
     role = request.json.get('role')
-    if any(param is None for param in [file_id, role]):
+    if any(param is None for param in [file_id, email, role]):
         raise BadRequestError('file_id, email and role expected to add permission')
+    user = UserService.get(email=email)
+    if not user:
+        raise NotFoundError('User is not recognised')
 
-    return PermissionService.create(file_id, role, user_email=email)
+    return PermissionService.create(file_id=file_id, user_id=user.id, role=role)
 
 
 @permissions.put("")

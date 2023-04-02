@@ -13,6 +13,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from constants import DATE_FORMAT, DATE_STYLE
 from context import db_session
 from database.models import File, Change
+from decorators import enforce_permission
 from services import file_cache, FileService
 from enums import ChangeType
 from util.subprocess import open_close_excel
@@ -23,8 +24,9 @@ logger = logging.getLogger(__name__)
 class FileDataService:
 
     @classmethod
+    @enforce_permission(file_id_key='id_', required_roles=['*'])
     def get_data(cls, id_: str) -> dict:
-        file = FileService.get(id_, internal=True)
+        file = FileService.get(id_=id_, internal=True)
 
         cells: List[List[ReadOnlyCell]] = file_cache.load_excel(file)
         data_types = file.data_types
@@ -148,8 +150,9 @@ class FileDataService:
                 new_cell_formula = cls._generate_cell_formula(ws, hc.column_letter, new_row_number)
                 new_cell.value = new_cell_formula
             elif data_type == 'd':
-                new_cell.value = datetime.strptime(new_value_str, DATE_FORMAT)
-                new_cell.number_format = DATE_STYLE
+                if new_value_str is not None:
+                    new_cell.value = datetime.strptime(new_value_str, DATE_FORMAT)
+                    new_cell.number_format = DATE_STYLE
             elif data_type == 'n':
                 if new_value_str.isdigit():
                     new_value = int(new_value_str)

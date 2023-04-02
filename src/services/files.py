@@ -3,13 +3,18 @@ from typing import List
 
 from context import db_session, current_user_id
 from database.models import File, Permission
+from decorators import enforce_permission
 from error import NotFoundError, BadRequestError
 from services import file_cache
 
 
 class FileService:
     @classmethod
+    @enforce_permission(file_id_key='id_', required_roles=['*'])
     def get(cls, id_: str, internal: bool = False) -> File or dict:
+        """
+        Get a file. Must pass id_ as kwarg for permission enforcement
+        """
         session = db_session.get()
         file = session.query(File).filter_by(id=id_).one_or_none()
         if not file:
@@ -19,9 +24,8 @@ class FileService:
 
     @classmethod
     def list(cls) -> List[dict]:
-        user_id = current_user_id.get()
-        print(user_id)
         session = db_session.get()
+        user_id = current_user_id.get()
         files = (
             session.query(File)
             .join(Permission, Permission.file_id == File.id)
@@ -41,6 +45,7 @@ class FileService:
         return cls._file_to_dict(file)
 
     @classmethod
+    @enforce_permission(file_id_key='id_', required_roles=['OWNER'])
     def update(cls, id_: str, file_bytes: bytes, filename: str, content_type: str, data_types: dict):
         cls._validate_content_type(content_type)
         session = db_session.get()
@@ -58,6 +63,7 @@ class FileService:
         return cls._file_to_dict(file)
 
     @classmethod
+    @enforce_permission(file_id_key='id_', required_roles=['OWNER'])
     def delete(cls, id_: str) -> bool:
         session = db_session.get()
         file = cls.get(id_=id_, internal=True)
@@ -66,6 +72,7 @@ class FileService:
         return True
 
     @classmethod
+    @enforce_permission(file_id_key='id_', required_roles=['*'])
     def download(cls, id_: str) -> (bytes, str, str):
         file = cls.get(id_=id_, internal=True)
         blob = io.BytesIO(file.blob)

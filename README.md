@@ -22,8 +22,6 @@ returning the new values.
   in other transactions. Better solution is needed, but for now it just iterates through previous rows to find a match.
 - Add functionality for row insertions
 - Enforce unique file name
-- user signup, login
-- enforce permissions for queries, ie only return wha the user should see
 
 
 ### Run app

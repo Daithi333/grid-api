@@ -4,7 +4,6 @@ from context import db_session
 from database.models import Permission
 from enums import Role
 from error import NotFoundError, BadRequestError
-from services import UserService
 
 
 class PermissionService:
@@ -42,30 +41,22 @@ class PermissionService:
         return [cls._permission_to_dict(p) for p in permissions]
 
     @classmethod
-    def create(cls, file_id: str, role: str, user_id: str = None, user_email: str = None) -> dict:
-        if user_id is None and user_email is None:
-            raise BadRequestError('User id or email not provided')
-
-        user = UserService.get(id_=user_id, email=user_email)
-        if not user:
-            raise NotFoundError('User is not recognised')
-
+    def create(cls, file_id: str, user_id: str, role: str) -> dict:
         try:
             role = Role[role]
         except KeyError:
             raise BadRequestError(f'Invalid role provided: {role!r}')
 
         try:
-            cls.get(user_id=user.id, file_id=file_id)
-            user_str = user_email if user_email is not None else user_id
-            raise BadRequestError(f'User {user_str!r} already has role {role.name!r} for file {file_id!r}')
+            cls.get(user_id=user_id, file_id=file_id)
+            raise BadRequestError(f'User {user_id!r} already has role {role.name!r} for file {file_id!r}')
         except NotFoundError:
             pass  # doesn't exist so proceed
 
         session = db_session.get()
         permission = Permission(
             file_id=file_id,
-            user_id=user.id,
+            user_id=user_id,
             role=role
         )
         session.add(permission)

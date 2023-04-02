@@ -22,7 +22,7 @@ def add_transaction():
     if not changes_data:
         raise BadRequestError(message='changes not found in request')
 
-    return TransactionService.create(file_id, user_id, changes_data)
+    return TransactionService.create(file_id=file_id, user_id=user_id, changes_data=changes_data)
 
 
 @transactions.get("")
@@ -47,6 +47,10 @@ def update_transaction():
     if not transaction_id:
         raise BadRequestError(message='id not found in request')
 
+    file_id = request.args.get('file_id')
+    if not transaction_id:
+        raise BadRequestError(message='file id not found in request')
+
     status = request.json.get('status')
     notes = request.json.get('notes')
     user_id = current_user_id.get()
@@ -54,7 +58,7 @@ def update_transaction():
     if not status:
         raise BadRequestError(message='status not found in request')
 
-    return TransactionService.update(transaction_id, user_id, status, notes)
+    return TransactionService.update(transaction_id, user_id, status, file_id=file_id, notes=notes)
 
 
 @transactions.delete("")

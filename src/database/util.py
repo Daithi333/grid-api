@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 
@@ -17,3 +19,7 @@ def db_exists(url: str):
         conn = engine.connect()
         conn.execute(f"CREATE DATABASE {dbname}")
         conn.close()
+
+
+def generate_uuid() -> str:
+    return str(uuid.uuid4())

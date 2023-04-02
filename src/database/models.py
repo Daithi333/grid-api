@@ -26,7 +26,9 @@ class File(Base):
     blob = Column(LargeBinary, nullable=False)
     _data_types = Column(String, nullable=False)
 
+    views = relationship("View", back_populates="file", cascade='all, delete')
     transactions = relationship("Transaction", back_populates="file", cascade='all, delete')
+    permissions = relationship("Permission", back_populates="file", cascade='all, delete')
 
     @property
     def data_types(self) -> dict:
@@ -44,7 +46,8 @@ class View(Base):
     name = Column(String, nullable=False)
     _fields = Column(String, nullable=False)
 
-    filters = relationship('Filter', backref="view")
+    filters = relationship('Filter', back_populates="view", cascade='all, delete')
+    file = relationship("File", back_populates="views")
 
     @property
     def fields(self) -> List[str]:
@@ -63,7 +66,8 @@ class Filter(Base):
     filter_type = Column(ENUM_FILTER_TYPE, nullable=False)
     operator = Column(ENUM_FILTER_OPERATOR, nullable=True)
 
-    conditions = relationship('Condition', backref="filter")
+    conditions = relationship('Condition', back_populates="filter", cascade='all, delete')
+    view = relationship("View", back_populates="filters")
 
 
 class Condition(Base):
@@ -72,6 +76,8 @@ class Condition(Base):
     filter_id = Column(Integer, ForeignKey('filter.id'), nullable=False)
     operator = Column(ENUM_CONDITION_OPERATOR, nullable=False)
     value = Column(String, nullable=True)
+
+    filter = relationship("Filter", back_populates="conditions")
 
 
 class Lookup(Base):
@@ -83,6 +89,14 @@ class Lookup(Base):
     lookup_file_id = Column(Integer, ForeignKey('file.id'), nullable=False)
     lookup_field = Column(String, nullable=False)
     operator = Column(ENUM_LOOKUP_OPERATOR, nullable=False)
+
+    file = relationship("File", foreign_keys=[file_id])
+    lookup_file = relationship('File', foreign_keys=[lookup_file_id])
+
+    __table_args__ = (
+        ForeignKeyConstraint([file_id], ['file.id']),
+        ForeignKeyConstraint([lookup_file_id], ['file.id'])
+    )
 
 
 class Transaction(Base):
@@ -144,6 +158,8 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     temp_password = Column(Boolean, nullable=False, default=False)
 
+    permissions = relationship("Permission", back_populates="user", cascade='all, delete')
+
 
 class Permission(Base):
     __tablename__ = "permission"
@@ -152,5 +168,5 @@ class Permission(Base):
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     role = Column(ENUM_ROLE, nullable=False)
 
-    file = relationship('File', backref="permissions")
-    user = relationship('User', backref="permissions")
+    file = relationship("File", back_populates="permissions")
+    user = relationship('User', back_populates="permissions")

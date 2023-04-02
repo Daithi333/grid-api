@@ -1,15 +1,15 @@
 from flask import Blueprint, request, jsonify, send_file
-from flask_jwt_extended import jwt_required
 
+from context import current_user_id
 from decorators import jwt_user_required
 from error import BadRequestError
-from services import FileDataService, FileService
+from services import FileDataService, FileService, PermissionService
 
 files = Blueprint('files', __name__, url_prefix='/files')
 
 
 @files.post("")
-@jwt_required()
+@jwt_user_required()
 def add_file():
     file = request.files.get('file')
     if not file:
@@ -19,11 +19,14 @@ def add_file():
     content_type = file.content_type
     file_bytes = file.read()
     data_types = FileDataService.get_data_types(file_bytes)
-    return FileService.create(file_bytes, filename, content_type, data_types)
+    file_ = FileService.create(file_bytes, filename, content_type, data_types)
+    user_id = current_user_id.get()
+    PermissionService.create(file_id=file_['id'], user_id=user_id, role='OWNER')
+    return file_
 
 
 @files.put("")
-@jwt_required()
+@jwt_user_required()
 def update_file():
     file_id = request.args.get('id')
     if not file_id:
@@ -52,7 +55,7 @@ def get_files():
 
 
 @files.delete("")
-@jwt_required()
+@jwt_user_required()
 def delete_file():
     file_id = request.args.get('id')
     if not file_id:
@@ -63,7 +66,7 @@ def delete_file():
 
 
 @files.get("/download")
-@jwt_required()
+@jwt_user_required()
 def download_file():
     file_id = request.args.get('id')
     if not file_id:
@@ -74,7 +77,7 @@ def download_file():
 
 
 @files.get("/data")
-@jwt_required()
+@jwt_user_required()
 def get_file_data():
     file_id = request.args.get('id')
     if not file_id:

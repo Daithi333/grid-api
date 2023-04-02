@@ -3,7 +3,8 @@ from typing import List
 
 from context import db_session
 from database.models import Transaction, Change
-from enums import ChangeType, ApprovalStatus
+from decorators import enforce_permission
+from enums import ChangeType, ApprovalStatus, Role
 from error import NotFoundError, BadRequestError
 from services import FileDataService
 
@@ -25,7 +26,8 @@ class TransactionService:
         return [cls._transaction_to_dict(t) for t in transactions]
 
     @classmethod
-    def create(cls, file_id: str, user_id: str, changes_data: dict) -> dict:
+    @enforce_permission(file_id_key='file_id', required_roles=['OWNER', 'CONTRIBUTOR'])
+    def create(cls, file_id: str, user_id: str, changes_data: dict, user_role: Role) -> dict:
         session = db_session.get()
         changes = [
             Change(
@@ -36,15 +38,30 @@ class TransactionService:
             )
             for c in changes_data
         ]
-        transaction = Transaction(file_id=file_id, user_id=user_id, status=ApprovalStatus.PENDING, changes=changes)
+        status = ApprovalStatus.AUTO_APPROVED if user_role == Role.OWNER else ApprovalStatus.PENDING
 
+        transaction = Transaction(
+            file_id=file_id,
+            user_id=user_id,
+            status=status,
+            changes=changes
+        )
         session.add(transaction)
         session.commit()
         session.refresh(transaction)
+
+        if status == ApprovalStatus.AUTO_APPROVED:
+            try:
+                FileDataService.apply_changes(transaction.file, transaction.changes)
+            except Exception as e:
+                traceback.print_exc()
+                raise BadRequestError(f'unable to apply changes in transaction {transaction.id}: {e}')
+
         return cls._transaction_to_dict(transaction)
 
     @classmethod
-    def update(cls, id_: str, user_id: str, status: str, notes: str = None):
+    @enforce_permission(file_id_key='file_id', required_roles=['OWNER'])
+    def update(cls, id_: str, user_id: str, status: str, file_id: str, notes: str = None):
         session = db_session.get()
         transaction = cls.get(id_=id_, internal=True)
 
