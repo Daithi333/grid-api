@@ -1,8 +1,8 @@
 import io
 from typing import List
 
-from database import db_session
-from database.models import File
+from context import db_session, current_user_id
+from database.models import File, Permission
 from error import NotFoundError, BadRequestError
 from services import file_cache
 
@@ -19,8 +19,15 @@ class FileService:
 
     @classmethod
     def list(cls) -> List[dict]:
+        user_id = current_user_id.get()
+        print(user_id)
         session = db_session.get()
-        files = session.query(File).all()
+        files = (
+            session.query(File)
+            .join(Permission, Permission.file_id == File.id)
+            .filter(Permission.user_id == user_id)
+            .all()
+        )
         return [cls._file_to_dict(f) for f in files]
 
     @classmethod

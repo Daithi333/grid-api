@@ -1,7 +1,4 @@
 import logging
-from contextvars import ContextVar
-
-from sqlalchemy.orm import Session
 
 from config import Config
 from .db import SqliteDatabase, PostgresDatabase
@@ -30,17 +27,3 @@ else:
 
 # db.drop_schema()
 # db.create_schema()
-
-db_session: ContextVar[Session] = ContextVar("db_session")
-
-
-def init_db_session():
-    session = db.get_session()
-    db_session.set(session)
-    logger.debug('Initialised Database Session')
-
-
-def teardown_db_session():
-    session = db_session.get()
-    session.close()
-    logger.debug('Closed Database Session')

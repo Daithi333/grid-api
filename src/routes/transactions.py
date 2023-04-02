@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 
+from context import current_user_id
+from decorators import jwt_user_required
 from error import BadRequestError
 from services import TransactionService
 
@@ -8,12 +10,11 @@ transactions = Blueprint('transactions', __name__, url_prefix='/transactions')
 
 
 @transactions.post("")
-@jwt_required()
+@jwt_user_required()
 def add_transaction():
     file_id = request.json.get('fileId')
     changes_data = request.json.get('changes', [])
-    identity = get_jwt_identity()
-    user_id = str(identity.get('id'))
+    user_id = current_user_id.get()
 
     if not file_id:
         raise BadRequestError(message='file id not found in request')
@@ -40,7 +41,7 @@ def get_transactions():
 
 
 @transactions.put("")
-@jwt_required()
+@jwt_user_required()
 def update_transaction():
     transaction_id = request.args.get('id')
     if not transaction_id:
@@ -48,8 +49,7 @@ def update_transaction():
 
     status = request.json.get('status')
     notes = request.json.get('notes')
-    identity = get_jwt_identity()
-    user_id = str(identity.get('id'))
+    user_id = current_user_id.get()
 
     if not status:
         raise BadRequestError(message='status not found in request')

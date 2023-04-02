@@ -11,7 +11,7 @@ from openpyxl.formula.translate import Translator
 from openpyxl.worksheet.worksheet import Worksheet
 
 from constants import DATE_FORMAT, DATE_STYLE
-from database import db_session
+from context import db_session
 from database.models import File, Change
 from services import file_cache, FileService
 from enums import ChangeType
@@ -24,7 +24,7 @@ class FileDataService:
 
     @classmethod
     def get_data(cls, id_: str) -> dict:
-        file = FileService.get(id_=id_, internal=True)
+        file = FileService.get(id_, internal=True)
 
         cells: List[List[ReadOnlyCell]] = file_cache.load_excel(file)
         data_types = file.data_types

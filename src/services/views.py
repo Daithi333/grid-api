@@ -1,6 +1,6 @@
 from typing import List
 
-from database import db_session
+from context import db_session
 from database.models import View, Condition, Filter
 from enums import ConditionOperator, FilterType, FilterOperator
 from error import NotFoundError

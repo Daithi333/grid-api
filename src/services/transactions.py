@@ -1,7 +1,7 @@
 import traceback
 from typing import List
 
-from database import db_session
+from context import db_session
 from database.models import Transaction, Change
 from enums import ChangeType, ApprovalStatus
 from error import NotFoundError, BadRequestError

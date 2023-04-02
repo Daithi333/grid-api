@@ -1,6 +1,6 @@
 from typing import List
 
-from database import db_session
+from context import db_session
 from database.models import Lookup
 from enums import LookupOperator
 from error import NotFoundError

@@ -1,6 +1,6 @@
 from typing import List
 
-from database import db_session
+from context import db_session
 from database.models import Permission
 from enums import Role
 from error import NotFoundError, BadRequestError
@@ -10,7 +10,9 @@ from services import UserService
 class PermissionService:
 
     @classmethod
-    def get(cls, id_: str = None, file_id: str = None, user_id: str = None, internal: bool = False) -> Permission or dict:
+    def get(
+        cls, id_: str = None, file_id: str = None, user_id: str = None, internal: bool = False
+    ) -> Permission or dict:
         filters = {}
         if id_:
             filters['id'] = id_
@@ -54,7 +56,7 @@ class PermissionService:
             raise BadRequestError(f'Invalid role provided: {role!r}')
 
         try:
-            cls.get(file_id, user.id)
+            cls.get(user_id=user.id, file_id=file_id)
             user_str = user_email if user_email is not None else user_id
             raise BadRequestError(f'User {user_str!r} already has role {role.name!r} for file {file_id!r}')
         except NotFoundError:

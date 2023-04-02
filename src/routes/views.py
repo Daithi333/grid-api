@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 
 from error import BadRequestError
-from services.views import ViewService
+from services import ViewService
 
 views = Blueprint('views', __name__, url_prefix='/views')
 

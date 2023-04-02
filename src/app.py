@@ -5,7 +5,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required
 
 from config import Config
-from database import init_db_session, teardown_db_session
+from context import init_db_session, teardown_db_session
 from logger import init_root_logger
 from services import file_cache
 from error import (

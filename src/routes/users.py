@@ -6,7 +6,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token, jwt_re
 
 from config import Config
 from error import BadRequestError, UnauthorizedError
-from services.users import UserService
+from services import UserService
 
 users = Blueprint('users', __name__, url_prefix='/users')
 

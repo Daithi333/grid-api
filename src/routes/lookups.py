@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 
 from error import BadRequestError
-from services.lookups import LookupService
+from services import LookupService
 
 lookups = Blueprint('lookups', __name__, url_prefix='/lookups')
 

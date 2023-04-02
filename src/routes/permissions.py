@@ -1,14 +1,15 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+from decorators import jwt_user_required
 from error import BadRequestError
-from services.permissions import PermissionService
+from services import PermissionService
 
 permissions = Blueprint('permissions', __name__, url_prefix='/permissions')
 
 
 @permissions.get("/user")
-@jwt_required()
+@jwt_user_required()
 def get_current_user_permissions():
     """Get the current (requesting) user permissions or one or all files"""
     identity = get_jwt_identity()
@@ -24,6 +25,7 @@ def get_current_user_permissions():
 @permissions.get("")
 @jwt_required()
 def get_permissions():
+    """Get all permissions for a particular file or user other than the requesting user"""
     file_id = request.args.get('fileId')
     user_id = request.args.get('userId')
     if not file_id and not user_id:

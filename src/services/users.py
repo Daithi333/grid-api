@@ -3,7 +3,7 @@ import re
 import bcrypt
 
 from constants import EMAIL_REGEX, PASSWORD_REGEX
-from database import db_session
+from context import db_session
 from database.models import User
 from error import BadRequestError, UnauthorizedError
 

@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required
 
+from decorators import jwt_user_required
 from error import BadRequestError
 from services import FileDataService, FileService
 
@@ -40,11 +41,11 @@ def update_file():
 
 
 @files.get("")
-@jwt_required()
+@jwt_user_required()
 def get_files():
     file_id = request.args.get('id')
     if file_id:
-        return FileService.get(id_=file_id)
+        return FileService.get(file_id)
     else:
         files_ = FileService.list()
         return jsonify(files_)
