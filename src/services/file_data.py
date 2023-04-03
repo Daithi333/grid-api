@@ -36,7 +36,10 @@ class FileDataService:
             row = {'_rowNumber': row_number + 1}
             for i, hc in enumerate(cells[0]):
                 if data_types[hc.value] == 'd':
-                    cell_value = row_cells[i].value.strftime(DATE_FORMAT)
+                    if row_cells[i].value is not None:
+                        cell_value = row_cells[i].value.strftime(DATE_FORMAT)
+                    else:
+                        cell_value = row_cells[i].value
                 else:
                     cell_value = row_cells[i].value
 
@@ -110,7 +113,7 @@ class FileDataService:
             elif change.change_type == ChangeType.DELETE:
                 cls._handle_delete(ws, change)
             else:  # update
-                cls._handle_update(ws, change, file.data_types)
+                cls._handle_update(ws, change)
 
         cls._regenerate_formulas(ws, file.data_types)
 
@@ -203,7 +206,7 @@ class FileDataService:
         return True
 
     @staticmethod
-    def _handle_update(ws: Worksheet, change: Change, data_types: dict):
+    def _handle_update(ws: Worksheet, change: Change):
         """Update an existing row in the spreadsheet"""
         logger.info('Update new row - begin')
         update_row_number = change.row_number + 1

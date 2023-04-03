@@ -13,6 +13,7 @@ xlwings = "*"
 bcrypt = "*"
 flask-jwt-extended = "*"
 contextvars = "*"
+shortuuid = "*"
 
 [dev-packages]
 pytest = "*"

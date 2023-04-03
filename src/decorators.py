@@ -1,4 +1,5 @@
 import inspect
+import logging
 from functools import wraps
 from typing import List
 
@@ -6,11 +7,13 @@ from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 
 from context import init_user_id, current_user_id, db_session
 from database.models import Permission
-from error import UnauthorizedError
+from error import UnauthorizedError, BadRequestError
+
+logger = logging.getLogger(__name__)
 
 
 def jwt_user_required():
-    """Same as the default 'jwt_required' but sets the user id in context variable """
+    """Same as the default 'jwt_required' but sets the user id from the token in a context variable """
     def wrapper(func):
         @wraps(func)
         def decorator(*args, **kwargs):
@@ -43,10 +46,17 @@ def enforce_permission(file_id_key: str, required_roles: List[str]):
                 .filter_by(file_id=file_id, user_id=user_id)
                 .one_or_none()
             )
+            if not file_id:
+                logger.error(f'file id not found in call to decorated function {func!r}')
+                raise BadRequestError('file id required for permission check')
+
             if not permission:
+                logger.warning(f'User permission not found for file {file_id!r} and function {func!r}')
                 raise UnauthorizedError('User not permitted to perform action')
 
-            if not any([r for r in ['*', permission.role.name] if r in required_roles]):
+            user_role = permission.role.name
+            if not any([r for r in ['*', user_role] if r in required_roles]):
+                logger.warning(f'User role {user_role!r} insufficient for function {func!r} on file {file_id!r}')
                 raise UnauthorizedError('Role not permitted to perform action')
 
             if 'user_role' in inspect.signature(func).parameters:

@@ -10,7 +10,7 @@ from logger import init_root_logger
 from services import file_cache
 from error import (
     NotFoundError, BadRequestError, handle_not_found, handle_bad_request,
-    UnauthorizedError, handle_unauthorized
+    UnauthorizedError, handle_unauthorized, handle_invalid_route, handle_internal_exception
 )
 from routes import files, views, lookups, transactions, users, permissions
 
@@ -27,6 +27,8 @@ app.register_blueprint(permissions)
 app.register_error_handler(NotFoundError, handle_not_found)
 app.register_error_handler(BadRequestError, handle_bad_request)
 app.register_error_handler(UnauthorizedError, handle_unauthorized)
+app.register_error_handler(404, handle_invalid_route)
+app.register_error_handler(500, handle_internal_exception)
 
 CORS(app, resources={r"/*": {"origins": "*"}})
 

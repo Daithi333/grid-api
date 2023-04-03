@@ -47,8 +47,8 @@ def update_transaction():
     if not transaction_id:
         raise BadRequestError(message='id not found in request')
 
-    file_id = request.args.get('file_id')
-    if not transaction_id:
+    file_id = request.json.get('fileId')
+    if not file_id:
         raise BadRequestError(message='file id not found in request')
 
     status = request.json.get('status')

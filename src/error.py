@@ -29,3 +29,11 @@ def handle_bad_request(e):
 
 def handle_unauthorized(e):
     return e.as_dict(), 401
+
+
+def handle_invalid_route(e):
+    return {'message': 'Requested route does not exist'}, 404
+
+
+def handle_internal_exception(e):
+    return {'message': f'Internal Error: {e}'}, 500

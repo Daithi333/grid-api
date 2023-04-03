@@ -26,4 +26,4 @@ else:
     raise ValueError(f'Unknown Database Engine provided: {Config.DB_ENGINE}')
 
 # db.drop_schema()
-# db.create_schema()
+db.create_schema()
