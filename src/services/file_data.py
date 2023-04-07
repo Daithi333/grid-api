@@ -36,14 +36,14 @@ class FileDataService:
             row = {'_rowNumber': row_number + 1}
             for i, hc in enumerate(cells[0]):
                 if data_types[hc.value] == 'd':
-                    if row_cells[i].value is not None:
+                    try:
                         cell_value = row_cells[i].value.strftime(DATE_FORMAT)
-                    else:
+                    except AttributeError:
                         cell_value = row_cells[i].value
                 else:
                     cell_value = row_cells[i].value
 
-                row[hc.value] = cell_value
+                row[hc.value] = cell_value if cell_value is not None else ''
 
             row_data.append(row)
 
@@ -149,13 +149,15 @@ class FileDataService:
             new_cell = ws[f'{hc.column_letter}{new_row_number}']
             new_value_str = new_row_data[hc.value]
 
+            if new_value_str is None:
+                continue
+
             if data_type in ['e', 'f']:
                 new_cell_formula = cls._generate_cell_formula(ws, hc.column_letter, new_row_number)
                 new_cell.value = new_cell_formula
             elif data_type == 'd':
-                if new_value_str is not None:
-                    new_cell.value = datetime.strptime(new_value_str, DATE_FORMAT)
-                    new_cell.number_format = DATE_STYLE
+                new_cell.value = datetime.strptime(new_value_str, DATE_FORMAT)
+                new_cell.number_format = DATE_STYLE
             elif data_type == 'n':
                 if new_value_str.isdigit():
                     new_value = int(new_value_str)
@@ -217,13 +219,10 @@ class FileDataService:
             if hc.value not in change.before:
                 raise Exception(f'Column {hc.value!r} not found in update row data for Change {change.id!r}')
 
+            updated_value_str = str(change.after[hc.value])
             if rc.data_type in ['e', 'f']:
                 continue
-
-            update_cell = ws[f'{hc.column_letter}{update_row_number}']
-            updated_value_str = str(change.after[hc.value])
-
-            if rc.data_type == 'n':
+            elif rc.data_type == 'n':
                 if updated_value_str.isdigit():
                     updated_value = int(updated_value_str)
                 else:
@@ -231,12 +230,12 @@ class FileDataService:
                         updated_value = float(updated_value_str)
                     except ValueError:
                         updated_value = updated_value_str
-                update_cell.value = updated_value
+                rc.value = updated_value
             elif rc.data_type == 'd':
-                update_cell.value = datetime.strptime(updated_value_str, DATE_FORMAT)
-                update_cell.number_format = DATE_STYLE
+                rc.value = datetime.strptime(updated_value_str, DATE_FORMAT)
+                rc.number_format = DATE_STYLE
             else:
-                update_cell.value = updated_value_str
+                rc.value = updated_value_str
         logger.info('Update new row - complete')
 
     @classmethod

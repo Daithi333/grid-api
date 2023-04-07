@@ -19,7 +19,7 @@ def jwt_user_required():
         def decorator(*args, **kwargs):
             verify_jwt_in_request()
             identity = get_jwt_identity()
-            user_id = str(identity.get('id'))
+            user_id = identity.get('id')
             init_user_id(user_id)
             return func(*args, **kwargs)
 

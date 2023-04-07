@@ -17,8 +17,8 @@ class FileCache(LRUCache):
     def _generate_key(*args, **kwargs) -> hash:
         func = args[0]
         file = args[1]
-        file_id = str(file.id) if isinstance(file, File) else file
-        return str(file_id)
+        file_id = file.id if isinstance(file, File) else file
+        return file_id
 
 
 @FileCache
