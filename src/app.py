@@ -9,8 +9,8 @@ from context import init_db_session, teardown_db_session
 from logger import init_root_logger
 from services import file_cache
 from error import (
-    NotFoundError, BadRequestError, handle_not_found, handle_bad_request,
-    UnauthorizedError, handle_unauthorized, handle_invalid_route, handle_internal_exception
+    NotFoundError, BadRequestError, UnauthorizedError, handle_not_found, handle_bad_request,
+    handle_unauthorized, handle_invalid_route, handle_internal_exception
 )
 from routes import files, views, lookups, transactions, users, permissions
 

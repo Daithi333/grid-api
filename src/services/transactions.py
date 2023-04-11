@@ -1,4 +1,4 @@
-import traceback
+import logging
 from typing import List
 
 from context import db_session
@@ -7,6 +7,8 @@ from decorators import enforce_permission
 from enums import ChangeType, ApprovalStatus, Role
 from error import NotFoundError, BadRequestError
 from services import FileDataService
+
+logger = logging.getLogger(__name__)
 
 
 class TransactionService:
@@ -54,7 +56,7 @@ class TransactionService:
             try:
                 FileDataService.apply_changes(transaction.file, transaction.changes)
             except Exception as e:
-                traceback.print_exc()
+                logger.exception(e)
                 raise BadRequestError(f'unable to apply changes in transaction {transaction.id}: {e}')
 
         return cls._transaction_to_dict(transaction)
@@ -70,7 +72,7 @@ class TransactionService:
             try:
                 FileDataService.apply_changes(transaction.file, transaction.changes)
             except Exception as e:
-                traceback.print_exc()
+                logger.exception(e)
                 raise BadRequestError(f'unable to apply changes in transaction {id_}: {e}')
 
             transaction.approver_id = user_id

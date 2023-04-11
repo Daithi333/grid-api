@@ -40,7 +40,13 @@ def update_file():
     content_type = file.content_type
     file_bytes = file.read()
     data_types = FileDataService.get_data_types(file_bytes)
-    return FileService.update(file_id, file_bytes, filename, content_type, data_types)
+    return FileService.update(
+        id_=file_id,
+        file_bytes=file_bytes,
+        filename=filename,
+        content_type=content_type,
+        data_types=data_types
+    )
 
 
 @files.get("")

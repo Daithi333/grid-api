@@ -106,23 +106,26 @@ class FileDataService:
         wb = cls._load_workbook(file.blob)
         ws = wb.active  # only get single (first) worksheet for now
 
+        # take a snapshot of row2 values for use in formula translation
+        value_lookup = {cell.coordinate: cell.value for cell in list(ws[2])}
+
         changes.sort(key=lambda x: x.row_number, reverse=True)
         for change in changes:
             if change.change_type == ChangeType.CREATE:
                 cls._handle_create(ws, change, file.data_types)
-            elif change.change_type == ChangeType.DELETE:
-                cls._handle_delete(ws, change)
-            else:  # update
+            elif change.change_type == ChangeType.UPDATE:
                 cls._handle_update(ws, change)
+            else:
+                cls._handle_delete(ws, change)
 
-        cls._regenerate_formulas(ws, file.data_types)
+        cls._regenerate_formulas(ws, file.data_types, value_lookup)
 
         session = db_session.get()
         file_bytes = cls._convert_to_bytes(wb, file.name)
         logger.info('Converted workbook to bytes')
         file.blob = file_bytes
         session.commit()
-        file_cache.remove(str(file.id))  # remove old version of file data from cache
+        file_cache.remove(file.id)  # remove old version of file data from cache
         logger.info('Apply changes to workbook - complete')
         return True
 
@@ -153,8 +156,7 @@ class FileDataService:
                 continue
 
             if data_type in ['e', 'f']:
-                new_cell_formula = cls._generate_cell_formula(ws, hc.column_letter, new_row_number)
-                new_cell.value = new_cell_formula
+                pass  # formulas regenerated at end of the transaction
             elif data_type == 'd':
                 new_cell.value = datetime.strptime(new_value_str, DATE_FORMAT)
                 new_cell.number_format = DATE_STYLE
@@ -186,12 +188,12 @@ class FileDataService:
         if cls._is_match(header_cells, row_cells, change.before):
             ws.delete_rows(deletion_row_number)
         else:
-            print('Unable to delete row as it is not as expected.')
+            logger.warning('Unable to delete row as it is not as expected')
             for alt_deletion_row_number in range(deletion_row_number-1, 2, -1):
                 row_cells = list(ws[alt_deletion_row_number])
                 if cls._is_match(header_cells, row_cells, change.before):
                     ws.delete_rows(alt_deletion_row_number)
-                    print(f'Deleted row {alt_deletion_row_number} instead of {deletion_row_number} as data matched')
+                    logger.warning(f'Deleted row {alt_deletion_row_number} instead of {deletion_row_number}')
                     break
         logger.info('Delete new row - complete')
 
@@ -199,6 +201,8 @@ class FileDataService:
     def _is_match(cls, header_cells, row_cells, change_before) -> bool:
         for hc, rc in zip(header_cells, row_cells):
             excel_value = rc.value
+            if excel_value is None and change_before[hc.value] in ['', None]:
+                continue
             if rc.data_type in ['e', 'f']:
                 continue  # ignore value check on formula cells
             if rc.data_type == 'd':
@@ -239,24 +243,17 @@ class FileDataService:
         logger.info('Update new row - complete')
 
     @classmethod
-    def _generate_cell_formula(cls, ws: Worksheet, column_letter: str, row_number: int) -> str:
-        """Simple formula creation based on formula found in row 2 of the passed in column"""
-        row2_formula = ws[f'{column_letter}2'].value
-        if not row2_formula:
-            return ''
-
-        return Translator(row2_formula, origin=f'{column_letter}2').translate_formula(f'{column_letter}{row_number}')
-
-    @classmethod
-    def _regenerate_formulas(cls, ws: Worksheet, data_types: dict):
+    def _regenerate_formulas(cls, ws: Worksheet, data_types: dict, value_lookup: dict):
         logger.info('Regenerate cell formulas - begin')
         for hc in list(ws[1]):
             if data_types[hc.value] in ['e', 'f']:
                 column_letter = hc.column_letter
+                origin_coord = f'{column_letter}2'
+                origin_formula = value_lookup[origin_coord]
                 column_cells = list(ws[column_letter])
                 for i, cell in enumerate(column_cells[1:]):
-                    cell.value = cls._generate_cell_formula(ws, column_letter, i+2)
-                    # problems if row 2 deleted as it is used as baseline
+                    destination_coord = f'{column_letter}{i+2}'
+                    cell.value = Translator(origin_formula, origin=origin_coord).translate_formula(destination_coord)
         logger.info('Regenerate cell formulas - complete')
 
     @classmethod

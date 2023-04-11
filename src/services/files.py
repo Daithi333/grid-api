@@ -37,6 +37,9 @@ class FileService:
     @classmethod
     def create(cls, file_bytes: bytes, filename: str, content_type: str, data_types: dict) -> dict:
         cls._validate_content_type(content_type)
+        if any(f['name'] == filename for f in cls.list()):
+            raise BadRequestError(f'Filename {filename!r} already in use')
+
         session = db_session.get()
         file = File(blob=file_bytes, name=filename, content_type=content_type, data_types=data_types)
         session.add(file)
@@ -50,6 +53,11 @@ class FileService:
         cls._validate_content_type(content_type)
         session = db_session.get()
         file = cls.get(id_=id_, internal=True)
+
+        if file.name != filename:
+            # TODO - check file columns as well
+            raise BadRequestError('Replacement does not match existing file')
+
         file.blob = file_bytes
         file.name = filename
         file.content_type = content_type
@@ -59,7 +67,7 @@ class FileService:
             session.delete(t)
 
         session.commit()
-        file_cache.remove(str(id_))
+        file_cache.remove(id_)  # remove old version of file data from cache
         return cls._file_to_dict(file)
 
     @classmethod
