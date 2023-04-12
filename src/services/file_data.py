@@ -180,7 +180,7 @@ class FileDataService:
         If data does not match, iterate backwards to find a matching row to delete.
         TODO - Row insertions not supported yet, but logic would need to change to support those.
         """
-        logger.info('Delete new row - begin')
+        logger.info('Delete row - begin')
         deletion_row_number = change.row_number + 1
         header_cells = list(ws[1])
         row_cells = list(ws[deletion_row_number])
@@ -195,7 +195,7 @@ class FileDataService:
                     ws.delete_rows(alt_deletion_row_number)
                     logger.warning(f'Deleted row {alt_deletion_row_number} instead of {deletion_row_number}')
                     break
-        logger.info('Delete new row - complete')
+        logger.info('Delete row - complete')
 
     @classmethod
     def _is_match(cls, header_cells, row_cells, change_before) -> bool:

@@ -4,16 +4,17 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+bcrypt = "*"
+contextvars = "*"
 flask = "*"
 flask-cors = "*"
+flask-jwt-extended = "*"
+gunicorn = "*"
 openpyxl = "==3.1.0"  # bug in versions 3.1.1 and 3.1.2
 psycopg2 = "*"
+shortuuid = "*"
 sqlalchemy = "*"
 xlwings = "*"
-bcrypt = "*"
-flask-jwt-extended = "*"
-contextvars = "*"
-shortuuid = "*"
 
 [dev-packages]
 pytest = "*"

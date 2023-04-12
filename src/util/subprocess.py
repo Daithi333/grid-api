@@ -10,14 +10,14 @@ log = logging.getLogger(__name__)
 
 def open_close_excel(input_file: str):
     if platform == "linux" or platform == "linux2":
-        _open_close_excel_linux(input_file)
-    elif platform == "darwin":
+        _open_close_libre(input_file)
+    elif platform == "darwin" or platform == "win32":
+        _open_close_excel(input_file, platform)
+    else:
         raise NotImplementedError
-    elif platform == "win32":
-        _open_close_excel_windows(input_file)
 
 
-def _open_close_excel_linux(input_file: str) -> bool:
+def _open_close_libre(input_file: str) -> bool:
     """Open an excel it to re-evaluate formulas and cache results, then save and close. Expects .xlsx format."""
     if not Config.LO_AVAILABLE:
         log.warning(f'Unable to open-close file {input_file!r} as LibreOffice is not available')
@@ -48,7 +48,7 @@ def _open_close_excel_linux(input_file: str) -> bool:
         return False
 
 
-def _open_close_excel_windows(input_file) -> bool:
+def _open_close_excel(input_file, platform_: str) -> bool:
     """Open and close excel to re-evaluate formula and cache results. Requires Excel installation on machine."""
     if not Config.EXCEL_AVAILABLE:
         log.warning(f'Unable to open-close file {input_file!r} as MS Excel is not available')
@@ -56,8 +56,9 @@ def _open_close_excel_windows(input_file) -> bool:
 
     try:
         import xlwings
-        import pythoncom
-        pythoncom.CoInitialize()
+        if platform_ == 'win32':
+            import pythoncom
+            pythoncom.CoInitialize()
         excel_app = xlwings.App(visible=False)
         excel_book = excel_app.books.open(input_file)
         excel_book.save()

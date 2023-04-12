@@ -50,6 +50,12 @@ def get_cache_summary():
     return file_cache.summary()
 
 
+@app.get("/cache/keys")
+@jwt_required()
+def get_cache_keys():
+    return file_cache.keys()
+
+
 @app.delete("/cache")
 @jwt_required()
 def clear_from_cache():

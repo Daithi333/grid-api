@@ -28,6 +28,9 @@ class File(Base):
     _data_types = Column(String, nullable=False)
 
     views = relationship("View", back_populates="file", cascade='all, delete')
+    lookups = relationship(
+        "Lookup", back_populates="file", primaryjoin="File.id==Lookup.file_id", cascade='all, delete'
+    )
     transactions = relationship("Transaction", back_populates="file", cascade='all, delete')
     permissions = relationship("Permission", back_populates="file", cascade='all, delete')
 

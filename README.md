@@ -26,13 +26,17 @@ returning the new values.
 
 ### Run app
 
-Build: `docker build \
-          -t excel-app:local \
-          -f docker/Dockerfile \
-          .`
+#### Docker
 
-Add a `.env` to project root with necessary env variables
+ - Add a `.env` to project root with necessary env variables
 
-Run: `docker run --rm -p 5000:5000 --env-file ./.env --name excel-app excel-app:local`
+ - Build: `docker build -t excel-app:local -f docker/Dockerfile .`
 
-Create docker volume to persist db data `docker volume create pgdata`
+ - Run: `docker run --rm -p 5000:5000 --env-file ./.env --name excel-app excel-app:local`
+
+
+#### Docker compose
+
+ - Create docker volume to persist db data `docker volume create pgdata`
+
+ - Use `docker-compose build` or `docker-compose up`
