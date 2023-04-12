@@ -1,6 +1,9 @@
 from app import app
 from config import Config
-from server import ExcelApplication
+from logger import init_root_logger
+from server import ExcelApplication, CustomGunicornLogger, ACCESS_FORMAT, GUNICORN_LEVEL
+
+init_root_logger()
 
 
 def run_app():
@@ -10,7 +13,12 @@ def run_app():
         'threads': Config.GUNICORN_WORKER_THREADS,
         'timeout': Config.GUNICORN_TIMEOUT,
         'reload': Config.GUNICORN_RELOAD,
-        'worker_class': 'sync'
+        'worker_class': 'sync',
+        'logger_class': CustomGunicornLogger,
+        'access_log_format': ACCESS_FORMAT,
+        'loglevel': GUNICORN_LEVEL,
+        'accesslog': '-',
+        'errorlog': '-'
     }
     ExcelApplication(app, options=options).run()
 
