@@ -61,7 +61,7 @@ class ViewService:
     def _view_to_dict(cls, view: View) -> dict:
         return {
             'id': view.id,
-            'file_id': view.file_id,
+            'fileId': view.file_id,
             'name': view.name,
             'fields': view.fields,
             'filters': [

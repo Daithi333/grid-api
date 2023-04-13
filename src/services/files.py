@@ -18,7 +18,7 @@ class FileService:
         session = db_session.get()
         file = session.query(File).filter_by(id=id_).one_or_none()
         if not file:
-            raise NotFoundError(message=f'File {id_} not found')
+            raise NotFoundError(message=f'File {id_!r} not found')
 
         return file if internal else cls._file_to_dict(file)
 
@@ -36,7 +36,6 @@ class FileService:
 
     @classmethod
     def create(cls, file_bytes: bytes, filename: str, content_type: str, data_types: dict) -> dict:
-        cls._validate_content_type(content_type)
         if any(f['name'] == filename for f in cls.list()):
             raise BadRequestError(f'Filename {filename!r} already in use')
 
@@ -50,7 +49,6 @@ class FileService:
     @classmethod
     @enforce_permission(file_id_key='id_', required_roles=['OWNER'])
     def update(cls, id_: str, file_bytes: bytes, filename: str, content_type: str, data_types: dict):
-        cls._validate_content_type(content_type)
         session = db_session.get()
         file = cls.get(id_=id_, internal=True)
 
@@ -96,7 +94,7 @@ class FileService:
         }
 
     @classmethod
-    def _validate_content_type(cls, content_type):
+    def validate_content_type(cls, content_type):
         content_type_short = content_type.split('.')[0]
         if content_type_short not in ['application/vnd']:
             raise BadRequestError(message=f'unsupported file type {content_type_short!r}')

@@ -1,20 +1,20 @@
 from datetime import timedelta
 
-from flask import Flask, request
+from flask import Flask
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, jwt_required
+from flask_jwt_extended import JWTManager
 
 from config import Config
 from context import init_db_session, teardown_db_session
-from services import file_cache
 from error import (
     NotFoundError, BadRequestError, UnauthorizedError, handle_not_found, handle_bad_request,
     handle_unauthorized, handle_invalid_route, handle_internal_exception
 )
-from routes import files, views, lookups, transactions, users, permissions
+from routes import files, cache, views, lookups, transactions, users, permissions
 
 app = Flask(__name__)
 app.register_blueprint(files)
+app.register_blueprint(cache)
 app.register_blueprint(views)
 app.register_blueprint(lookups)
 app.register_blueprint(transactions)
@@ -39,32 +39,6 @@ jwt = JWTManager(app)
 @app.get("/")
 def read_root():
     return {"message": "ok"}
-
-
-@app.get("/cache")
-@jwt_required()
-def get_cache_summary():
-    return file_cache.summary()
-
-
-@app.get("/cache/keys")
-@jwt_required()
-def get_cache_keys():
-    return file_cache.keys()
-
-
-@app.delete("/cache")
-@jwt_required()
-def clear_from_cache():
-    file_id = request.args.get('id')
-    if file_id:
-        success = file_cache.remove(file_id)
-        message = f'File {file_id} cleared from file cache' if success else 'File not in cache'
-    else:
-        success = file_cache.clear()
-        message = 'File cache cleared'
-
-    return {'success': success, 'message': message}
 
 
 @app.before_request

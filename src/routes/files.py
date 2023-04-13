@@ -17,6 +17,7 @@ def add_file():
 
     filename = file.filename
     content_type = file.content_type
+    FileService.validate_content_type(content_type)
     file_bytes = file.read()
     data_types = FileDataService.get_data_types(file_bytes)
     file_ = FileService.create(file_bytes, filename, content_type, data_types)
@@ -38,6 +39,7 @@ def update_file():
 
     filename = file.filename
     content_type = file.content_type
+    FileService.validate_content_type(content_type)
     file_bytes = file.read()
     data_types = FileDataService.get_data_types(file_bytes)
     return FileService.update(
@@ -54,7 +56,7 @@ def update_file():
 def get_files():
     file_id = request.args.get('id')
     if file_id:
-        return FileService.get(file_id)
+        return FileService.get(id_=file_id)
     else:
         files_ = FileService.list()
         return jsonify(files_)

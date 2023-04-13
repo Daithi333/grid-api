@@ -46,7 +46,7 @@ class FileDataService:
                 row[hc.value] = cell_value if cell_value is not None else ''
 
             row_data.append(row)
-
+        print()
         return {
             'columnDefs': cls._get_column_definitions(cells, file.data_types),
             'rowData': row_data

@@ -1,0 +1,92 @@
+{
+  "columnDefs": [
+    {
+      "colId": "A",
+      "field": "First Name",
+      "filter": "agTextColumnFilter"
+    },
+    {
+      "colId": "B",
+      "field": "Last Name",
+      "filter": "agTextColumnFilter"
+    },
+    {
+      "colId": "C",
+      "field": "Age",
+      "filter": "agNumberColumnFilter"
+    },
+    {
+      "colId": "D",
+      "field": "Strength",
+      "filter": "agNumberColumnFilter"
+    },
+    {
+      "colId": "E",
+      "field": "Speed",
+      "filter": "agNumberColumnFilter"
+    },
+    {
+      "colId": "F",
+      "field": "Intelligence",
+      "filter": "agNumberColumnFilter"
+    },
+    {
+      "colId": "G",
+      "editable": false,
+      "field": "Average",
+      "filter": "agNumberColumnFilter",
+      "headerName": "Average*"
+    },
+    {
+      "colId": "H",
+      "field": "Date Entered",
+      "filter": "agDateColumnFilter"
+    }
+  ],
+  "rowData": [
+    {
+      "Age": 45,
+      "Average": 76.33333333333333,
+      "Date Entered": "14/01/2023",
+      "First Name": "Bruce",
+      "Intelligence": 80,
+      "Last Name": "Banner",
+      "Speed": 50,
+      "Strength": 99,
+      "_rowNumber": 1
+    },
+    {
+      "Age": 28,
+      "Average": 71.66666666666667,
+      "Date Entered": "14/01/2023",
+      "First Name": "Peter",
+      "Intelligence": 70,
+      "Last Name": "Parker",
+      "Speed": 75,
+      "Strength": 70,
+      "_rowNumber": 2
+    },
+    {
+      "Age": 46,
+      "Average": 68.33333333333333,
+      "Date Entered": "14/01/2023",
+      "First Name": "Tony",
+      "Intelligence": 90,
+      "Last Name": "Stark",
+      "Speed": 65,
+      "Strength": 50,
+      "_rowNumber": 3
+    },
+    {
+      "Age": 32,
+      "Average": 58.333333333333336,
+      "Date Entered": "14/01/2023",
+      "First Name": "Natasha",
+      "Intelligence": 60,
+      "Last Name": "Romanov",
+      "Speed": 70,
+      "Strength": 45,
+      "_rowNumber": 4
+    }
+  ]
+}

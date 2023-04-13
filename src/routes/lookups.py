@@ -11,13 +11,13 @@ lookups = Blueprint('lookups', __name__, url_prefix='/lookups')
 @jwt_required()
 def add_lookup():
     file_id = request.json.get('fileId')
-    field = request.json.get('lookupField')
+    field = request.json.get('field')
     name = request.json.get('name')
     lookup_file_id = request.json.get('lookupFileId')
     lookup_field = request.json.get('lookupField')
     operator = request.json.get('operator')
 
-    if not any([file_id, field, name, lookup_file_id, lookup_field, operator]):
+    if any(param is None for param in [file_id, field, name, lookup_file_id, lookup_field, operator]):
         raise BadRequestError(message='some lookup fields were missing')
 
     return LookupService.create(file_id, name, field, lookup_file_id, lookup_field, operator)
