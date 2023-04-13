@@ -25,21 +25,22 @@ def _open_close_libre(input_file: str) -> bool:
 
     try:
         log.info(f'Open-close file {input_file!r} - begin')
-        input_dir, input_filename = os.path.split(input_file)
-        temp_filename = os.path.splitext(input_filename)[0] + ".ods"
-        temp_file = os.path.join(input_dir, temp_filename)
-
-        # Open the input file in headless mode, triggering the caching of formula results, and save as ODS format
-        command = ["libreoffice", "--headless", "--calc", "--convert-to", "ods", input_file, "--outdir", input_dir]
-        log.info(f'Running command: {command}')
+        command = [
+            "libreoffice",
+            "--headless",
+            "--norestore",
+            "--nofirststartwizard",
+            "--calc",
+            "--accept='socket,host=localhost,port=2002;urp;StarOffice.ServiceManager'",
+            "--invisible",
+            "--convert-to",
+            "xlsx",
+            input_file,
+            "--outdir",
+            os.path.dirname(input_file),
+        ]
         subprocess.run(command, check=True)
 
-        # Convert the ODS file to XLSX format
-        command = ["libreoffice", "--headless", "--convert-to", "xlsx", temp_file, "--outdir", input_dir]
-        log.info(f'Running command: {command}')
-        subprocess.run(command, check=True)
-
-        os.remove(temp_file)
         log.info(f'Open-close file {input_file!r} - complete')
         return True
 

@@ -265,7 +265,6 @@ class FileDataService:
         logger.info('Converting workbook to bytes')
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = os.path.join(temp_dir, f'temp-{filename}')
-            logger.info(wb.active.max_row)
             wb.save(temp_path)
             open_close_excel(temp_path)
             with open(temp_path, 'rb') as temp_file:
