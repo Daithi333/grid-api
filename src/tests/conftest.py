@@ -8,12 +8,15 @@ import tests.test_env  # noqa
 
 from database import db
 from database.models import User, File, Permission
+from services import UserService
 
 DATA_PATH = './data'
 RESULTS_PATH = './results'
 TEST_EXCEL = 'test.xlsx'
 TEST_LOOKUP_EXCEL = 'lookup.xlsx'
 TEST_TXT = 'test.txt'
+TEST_USER_EMAIL = 'testuser@mail.com'
+TEST_USER_PASSWORD = 'Password1!'
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -26,11 +29,12 @@ def initialise_db():
 @pytest.fixture(scope="session")
 def test_user(initialise_db) -> dict:
     session = db.get_session()
+    password_hash = UserService.get_password_hash(TEST_USER_PASSWORD)
     user = User(
         firstname='test',
         lastname='user',
-        email='testuser@mail.com',
-        password_hash='abc123'
+        email=TEST_USER_EMAIL,
+        password_hash=password_hash
     )
     session.add(user)
     session.commit()
@@ -38,7 +42,7 @@ def test_user(initialise_db) -> dict:
     return {'id': user.id}
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def mock_jwt_required():
     """
     Disables the Auth check done by the '@jwt_required' decorator
@@ -47,7 +51,7 @@ def mock_jwt_required():
         yield mock_jwt_required
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def mock_jwt_functions(test_user):
     """
     Disables the Auth check done by the custom '@jwt_user_required' decorator,
@@ -58,6 +62,14 @@ def mock_jwt_functions(test_user):
 
         mock_get_jwt_identity.return_value = {'id': test_user['id']}
         yield mock_verify_jwt, mock_get_jwt_identity
+
+
+@pytest.fixture(scope="function")
+def mock_open_close_excel():
+    """Disables the open-save-close mechanism which is problematic and varies per OS"""
+    with patch('services.file_data.open_close_excel') as mock_open_close_excel:
+        yield mock_open_close_excel
+        mock_open_close_excel.reset_mock()
 
 
 @pytest.fixture(scope="function")
@@ -92,13 +104,18 @@ def test_file(test_user) -> dict:
 
 
 @pytest.fixture(scope="function", autouse=True)
-def test_delete_files():
+def test_teardown(test_user):
     """
-    Delete files and child objects after each test, while preserving the db schema and test user.
+    Delete files, (which cascades to views, lookups, transactions), file permissions and users.
+    Preserves the db schema as is slow to create and teardown for each test.
+    Test user is preserved for the entire session, as it never changes, but test file is recreated for each test.
     """
     yield
     session = db.get_session()
     session.query(File).delete()
+    session.query(Permission).delete()
+    preserve_users = [test_user['id']]
+    session.query(User).filter(User.id.notin_(preserve_users)).delete()
     session.commit()
 
 

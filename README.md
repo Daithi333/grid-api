@@ -21,7 +21,7 @@ returning the new values.
 - improve row numbers handling - row numbers are not fixed, so deletions in one transaction will invalidate row numbers 
   in other transactions. Better solution is needed, but for now it just iterates through previous rows to find a match.
 - Add functionality for row insertions
-- Enforce unique file name
+- More testing of data changes, and multiple transactions which will undoubtedly cause problems with row numbers
 
 
 ### Run app

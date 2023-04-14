@@ -1,0 +1,29 @@
+{
+    "approvedAt": "<<approvedAt>>",
+    "approverId": "<<approverId>>",
+    "changes": [
+        {
+            "after": {
+                "Age": "40",
+                "Average": null,
+                "Date Entered": "14/04/2023",
+                "First Name": "Steve",
+                "Intelligence": "85",
+                "Last Name": "Rogers",
+                "Speed": "75",
+                "Strength": "90"
+            },
+            "before": null,
+            "changeType": "create",
+            "id": "<<changeId>>",
+            "rowNumber": 6
+        }
+    ],
+    "createdAt": "<<createdAt>>",
+    "fileId": "<<fileId>>",
+    "id": "<<id>>",
+    "notes": null,
+    "status": "AUTO_APPROVED",
+    "transactionId": "<<transactionId>>",
+    "userId": "<<userId>>"
+}

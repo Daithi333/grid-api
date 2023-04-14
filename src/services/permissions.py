@@ -64,7 +64,12 @@ class PermissionService:
         return cls._permission_to_dict(permission)
 
     @classmethod
-    def update(cls, id_: str, role: Role) -> dict:
+    def update(cls, id_: str, role: str) -> dict:
+        try:
+            role = Role[role]
+        except KeyError:
+            raise BadRequestError(f'Invalid role provided: {role!r}')
+
         session = db_session.get()
         permission = cls.get(id_=id_, internal=True)
         permission.role = role

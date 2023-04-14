@@ -30,7 +30,7 @@ class TestLookups:
         assert response.status_code == 200
         return response.json
 
-    def test_get_lookups(self, client, test_file, mock_jwt_required, mock_jwt_functions):
+    def test_get_lookups(self, client, test_file):
         response = client.get("/lookups", query_string={'fileId': test_file['id']})
         assert response.status_code == 200
         assert isinstance(response.json, list)
@@ -76,7 +76,7 @@ class TestLookups:
             'message': 'file id not found in request'
         }
 
-    def test_add_lookup(self, client, test_file, mock_jwt_required, mock_jwt_functions):
+    def test_add_lookup(self, client, test_file):
         lookup_file_bytes = get_file_bytes(TEST_LOOKUP_EXCEL)
         virtual_file = BytesIO(lookup_file_bytes)
         response = client.post("/files", data={
@@ -145,7 +145,7 @@ class TestLookups:
         assert response.status_code == 400
         assert response.json == {'message': "some lookup fields were missing"}
 
-    def test_delete_lookup(self, client, test_file, mock_jwt_required, mock_jwt_functions):
+    def test_delete_lookup(self, client, test_file):
         lookup = self._add_lookup(client, test_file['id'])
         lookup_id = lookup['id']
 

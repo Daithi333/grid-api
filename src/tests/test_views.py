@@ -17,7 +17,7 @@ class TestViews:
         assert response.status_code == 200
         return response.json
 
-    def test_get_views(self, client, test_file, mock_jwt_required):
+    def test_get_views(self, client, test_file):
         response = client.get("/views", query_string={'fileId': test_file['id']})
         assert response.status_code == 200
         assert isinstance(response.json, list)
@@ -59,7 +59,7 @@ class TestViews:
             'message': 'file id not found in request'
         }
 
-    def test_add_view(self, client, test_file, mock_jwt_required):
+    def test_add_view(self, client, test_file):
         view_data = {
             'fileId': test_file['id'],
             'name': 'test view',
@@ -91,7 +91,7 @@ class TestViews:
         assert response.status_code == 400
         assert response.json == {'message': "view expected to have fields and filter data"}
 
-    def test_delete_view(self, client, test_file, mock_jwt_required):
+    def test_delete_view(self, client, test_file):
         view = self._add_view(client, test_file['id'])
         view_id = view['id']
 

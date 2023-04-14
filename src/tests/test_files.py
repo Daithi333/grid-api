@@ -6,7 +6,7 @@ from tests.util import mask_values
 
 class TestFiles:
 
-    def test_get_files(self, client, test_file, mock_jwt_functions):
+    def test_get_files(self, client, test_file):
         response = client.get("/files")
         assert response.status_code == 200
         assert isinstance(response.json, list)
@@ -40,7 +40,7 @@ class TestFiles:
             'message': "User not permitted to perform action"
         }
 
-    def test_add_file(self, client, mock_jwt_functions):
+    def test_add_file(self, client):
         text_excel_bytes = get_file_bytes(TEST_EXCEL)
         virtual_file = BytesIO(text_excel_bytes)
         response = client.post("/files", data={
@@ -81,7 +81,7 @@ class TestFiles:
             'message': "unsupported file type 'text/plain'"
         }
 
-    def test_update_file(self, client, test_file, mock_jwt_functions):
+    def test_update_file(self, client, test_file):
         text_excel_bytes = get_file_bytes(TEST_EXCEL)
         virtual_file = BytesIO(text_excel_bytes)
         response = client.put("/files", query_string={'id': test_file['id']}, data={
@@ -124,7 +124,7 @@ class TestFiles:
             'message': "Replacement does not match existing file"
         }
 
-    def test_download(self, client, test_file, mock_jwt_functions):
+    def test_download(self, client, test_file):
         response = client.get("/files/download", query_string={'id': test_file['id']})
         assert response.status_code == 200
         assert response.headers['Content-Type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -138,7 +138,7 @@ class TestFiles:
             'message': "id not found in request"
         }
 
-    def test_delete(self, client, test_file, mock_jwt_functions):
+    def test_delete(self, client, test_file):
         response = client.delete("/files", query_string={'id': test_file['id']})
         assert response.status_code == 200
         assert response.json == {'success': True}
@@ -149,7 +149,7 @@ class TestFiles:
             'message': "id not found in request"
         }
 
-    def test_get_file_data(self, client, test_file, mock_jwt_functions):
+    def test_get_file_data(self, client, test_file):
         response = client.get("/files/data", query_string={'id': test_file['id']})
         assert response.status_code == 200
         assert response.json == get_results('file_data.json')

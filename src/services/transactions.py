@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import List
 
 from context import db_session
@@ -41,12 +42,16 @@ class TransactionService:
             for c in changes_data
         ]
         status = ApprovalStatus.AUTO_APPROVED if user_role == Role.OWNER else ApprovalStatus.PENDING
+        approver_id = user_id if status == ApprovalStatus.AUTO_APPROVED else None
+        approved_at = datetime.now() if status == ApprovalStatus.AUTO_APPROVED else None
 
         transaction = Transaction(
             file_id=file_id,
             user_id=user_id,
             status=status,
-            changes=changes
+            changes=changes,
+            approver_id=approver_id,
+            approved_at=approved_at
         )
         session.add(transaction)
         session.commit()

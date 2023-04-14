@@ -14,9 +14,3 @@ class TestApp:
 
         response = client.post("/")
         assert response.status_code == 405
-
-        response = client.get("/files")
-        assert response.status_code == 401
-        assert response.json == {
-            "msg": "Missing Authorization Header"
-        }

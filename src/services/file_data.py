@@ -46,7 +46,7 @@ class FileDataService:
                 row[hc.value] = cell_value if cell_value is not None else ''
 
             row_data.append(row)
-        print()
+
         return {
             'columnDefs': cls._get_column_definitions(cells, file.data_types),
             'rowData': row_data
@@ -205,6 +205,8 @@ class FileDataService:
                 continue
             if rc.data_type in ['e', 'f']:
                 continue  # ignore value check on formula cells
+            if rc.data_type == 'n':
+                excel_value = str(excel_value)
             if rc.data_type == 'd':
                 excel_value = excel_value.strftime(DATE_FORMAT)
             if excel_value != change_before[hc.value]:

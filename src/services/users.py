@@ -53,7 +53,7 @@ class UserService:
         session = db_session.get()
         user = session.query(User).filter_by(email=email).one_or_none()
         if not user:
-            raise UnauthorizedError('User does not exist')
+            raise UnauthorizedError('Incorrect email or password')
 
         if not cls.valid_password(password, user.password_hash):
             raise UnauthorizedError('Incorrect email or password')
