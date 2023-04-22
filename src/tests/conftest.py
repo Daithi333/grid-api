@@ -4,14 +4,13 @@ from unittest.mock import patch
 
 import pytest
 
-import tests.test_env  # noqa
-
 from database import db
 from database.models import User, File, Permission
 from services import UserService
 
-DATA_PATH = './data'
-RESULTS_PATH = './results'
+parent_dir_path = os.path.abspath(os.path.dirname(__file__))
+DATA_PATH = os.path.join(parent_dir_path, 'data')
+RESULTS_PATH = os.path.join(parent_dir_path, 'results')
 TEST_EXCEL = 'test.xlsx'
 TEST_LOOKUP_EXCEL = 'lookup.xlsx'
 TEST_TXT = 'test.txt'

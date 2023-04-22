@@ -25,22 +25,21 @@ def _open_close_libre(input_file: str) -> bool:
 
     try:
         log.info(f'Open-close file {input_file!r} - begin')
-        command = [
-            "libreoffice",
-            "--headless",
-            "--norestore",
-            "--nofirststartwizard",
-            "--calc",
-            "--accept='socket,host=localhost,port=2002;urp;StarOffice.ServiceManager'",
-            "--invisible",
-            "--convert-to",
-            "xlsx",
-            input_file,
-            "--outdir",
-            os.path.dirname(input_file),
-        ]
+        input_dir, input_filename = os.path.split(input_file)
+        temp_filename = os.path.splitext(input_filename)[0] + ".ods"
+        temp_file = os.path.join(input_dir, temp_filename)
+
+        # Open the input file in headless mode, triggering the caching of formula results, and save as ODS format
+        command = ["libreoffice", "--headless", "--calc", "--convert-to", "ods", input_file, "--outdir", input_dir]
+        log.info(f'Running command: {command}')
         subprocess.run(command, check=True)
 
+        # Convert the ODS file to XLSX format
+        command = ["libreoffice", "--headless", "--convert-to", "xlsx", temp_file, "--outdir", input_dir]
+        log.info(f'Running command: {command}')
+        subprocess.run(command, check=True)
+
+        os.remove(temp_file)
         log.info(f'Open-close file {input_file!r} - complete')
         return True
 
@@ -60,11 +59,11 @@ def _open_close_excel(input_file, platform_: str) -> bool:
         if platform_ == 'win32':
             import pythoncom
             pythoncom.CoInitialize()
-        excel_app = xlwings.App(visible=False)
-        excel_book = excel_app.books.open(input_file)
-        excel_book.save()
-        excel_book.close()
-        excel_app.quit()
+        with xlwings.App(visible=False) as excel_app:
+            excel_book = excel_app.books.open(input_file)
+            excel_book.save()
+            excel_book.close()
+            excel_app.quit()
         return True
     except Exception:
         log.exception(f'Open-close file {input_file!r} - error')

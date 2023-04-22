@@ -2,6 +2,7 @@ import io
 import logging
 import os
 import tempfile
+from copy import copy
 from datetime import datetime
 from typing import List
 
@@ -47,10 +48,23 @@ class FileDataService:
 
             row_data.append(row)
 
+        cls._remove_trailing_empty_rows(row_data)
+
         return {
             'columnDefs': cls._get_column_definitions(cells, file.data_types),
             'rowData': row_data
         }
+
+    @classmethod
+    def _remove_trailing_empty_rows(cls, row_data: List[dict]):
+        """Trailing empty rows cause problems when the cells have styles so ignore them"""
+        while True:
+            last_row_data = copy(row_data[-1])
+            del last_row_data['_rowNumber']
+            if all(value == '' for value in last_row_data.values()):
+                row_data.pop()
+                continue
+            break
 
     @classmethod
     def _get_column_definitions(cls, cells, data_types: dict) -> List[dict]:
@@ -209,7 +223,7 @@ class FileDataService:
                 excel_value = str(excel_value)
             if rc.data_type == 'd':
                 excel_value = excel_value.strftime(DATE_FORMAT)
-            if excel_value != change_before[hc.value]:
+            if excel_value != str(change_before[hc.value]):
                 return False
         return True
 

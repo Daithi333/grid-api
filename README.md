@@ -22,6 +22,7 @@ returning the new values.
   in other transactions. Better solution is needed, but for now it just iterates through previous rows to find a match.
 - Add functionality for row insertions
 - More testing of data changes, and multiple transactions which will undoubtedly cause problems with row numbers
+- Cache could just cache the file data and not the openpyxl cells
 
 
 ### Run app
@@ -40,3 +41,12 @@ returning the new values.
  - Create docker volume to persist db data `docker volume create pgdata`
 
  - Use `docker-compose build` or `docker-compose up`
+
+
+
+### Unit Tests
+
+ - To run the test suite, use `pytest src/tests -v`
+
+ - To run coverage report, use `pytest --cov=src --cov-config=.coveragerc src/` 
+   or `pytest --cov=src --cov-config=.coveragerc --cov-report=html src/` for html report
