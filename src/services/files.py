@@ -5,7 +5,7 @@ from context import db_session, current_user_id
 from database.models import File, Permission
 from decorators import enforce_permission
 from error import NotFoundError, BadRequestError
-from services import file_cache
+from services.file_data import file_cache
 
 
 class FileService:
@@ -65,7 +65,7 @@ class FileService:
             session.delete(t)
 
         session.commit()
-        file_cache.remove(id_)  # remove old version of file data from cache
+        file_cache.remove(id_=id_)  # remove old version of file data from cache
         return cls._file_to_dict(file)
 
     @classmethod

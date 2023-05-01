@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 
-from services import file_cache
+from services.file_data import file_cache
 
 cache = Blueprint('cache', __name__, url_prefix='/cache')
 
@@ -23,7 +23,7 @@ def get_cache_keys():
 def clear_from_cache():
     file_id = request.args.get('id')
     if file_id:
-        success = file_cache.remove(file_id)
+        success = file_cache.remove(id_=file_id)
         message = f'File {file_id} cleared from file cache' if success else 'File not in cache'
     else:
         success = file_cache.clear()

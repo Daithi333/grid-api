@@ -1,54 +1,49 @@
-from abc import ABC, abstractmethod
+import functools
 from collections import OrderedDict
-from functools import update_wrapper
 from typing import List
 
 
-class LRUCache(ABC):
-    """
-    Base Class for LRU Caching. Must be sub-classed and _generate_key implemented to specify what the cache keys should
-    be, using the args and kwargs passed into the decorated function. Property 'maxsize' can be overridden in subclass.
-    """
-    def __init__(self, func, maxsize=128):
+class LRUCache:
+
+    def __init__(self, maxsize: int):
         self.cache = OrderedDict()
-        self.func = func
         self.maxsize = maxsize
         self.hits = 0
         self.misses = 0
-        update_wrapper(self, self.func)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            key = self._generate_key(*args, **kwargs)
+            cache = self.cache
+            if key in cache:
+                cache.move_to_end(key)
+                self.hits += 1
+                return cache[key]
+            result = func(*args, **kwargs)
+            cache[key] = result
+            if len(cache) > self.maxsize:
+                cache.popitem(last=False)
+            self.misses += 1
+            return result
+        return wrapper
+
+    def remove(self, *args, **kwargs) -> bool:
         key = self._generate_key(*args, **kwargs)
-        cache = self.cache
-        if key in cache:
-            cache.move_to_end(key)
-            self.hits += 1
-            return cache[key]
-        result = self.func(*args, **kwargs)
-        cache[key] = result
-        if len(cache) > self.maxsize:
-            cache.popitem(last=False)
-        self.misses += 1
-        return result
-
-    def __repr__(self):
-        return self.func.__repr__()
-
-    def remove(self, *args) -> bool:
-        key = self._generate_key(*args)
         if key in self.cache:
             self.cache.pop(key)
             return True
         return False
 
-    def replace(self, value, *args):
-        key = self._generate_key(*args)
+    def replace(self, value, *args, **kwargs):
+        key = self._generate_key(*args, **kwargs)
         self.cache[key] = value
 
-    def clear(self):
+    def clear(self) -> bool:
         self.cache.clear()
         self.hits = 0
         self.misses = 0
+        return True
 
     def keys(self) -> List[str]:
         return list(self.cache.keys())
@@ -61,6 +56,8 @@ class LRUCache(ABC):
             'misses': self.misses
         }
 
-    @abstractmethod
-    def _generate_key(*args, **kwargs) -> str:
-        raise NotImplementedError
+    def _generate_key(*args, **kwargs):
+        id_ = kwargs.pop('id_')
+        if not id_:
+            raise Exception('id_ not found in kwargs')
+        return id_

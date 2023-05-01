@@ -11,25 +11,31 @@ from openpyxl.cell import ReadOnlyCell
 from openpyxl.formula.translate import Translator
 from openpyxl.worksheet.worksheet import Worksheet
 
+from config import Config
 from constants import DATE_FORMAT, DATE_STYLE
 from context import db_session
 from database.models import File, Change
 from decorators import enforce_permission
-from services import file_cache, FileService
 from enums import ChangeType
+from util.LRU import LRUCache
 from util.subprocess import open_close_excel
 
 logger = logging.getLogger(__name__)
+file_cache = LRUCache(maxsize=Config.FILE_CACHE_SIZE)
 
 
 class FileDataService:
 
     @classmethod
+    @file_cache
     @enforce_permission(file_id_key='id_', required_roles=['*'])
     def get_data(cls, id_: str) -> dict:
+        from services import FileService
         file = FileService.get(id_=id_, internal=True)
 
-        cells: List[List[ReadOnlyCell]] = file_cache.load_excel(file)
+        wb = cls._load_workbook(file.blob, read_only=True, data_only=True)
+        ws = wb.active  # only get single (first) worksheet for now
+        cells: List[List[ReadOnlyCell]] = list(ws.rows)[:]
         data_types = file.data_types
 
         row_data = []
@@ -91,7 +97,7 @@ class FileDataService:
     @classmethod
     def get_data_types(cls, file_bytes: bytes) -> dict:
         """Return dictionary of column header to data type, based on the first populated row for each column."""
-        wb = cls._load_workbook(file_bytes)
+        wb = cls._load_workbook(file_bytes, read_only=False, data_only=False)
         ws = wb.active
         cells = list(ws.rows)[:]
 
@@ -117,7 +123,7 @@ class FileDataService:
         TODO - Other pending transactions will still be affected and need a solution.
         """
         logger.info('Apply changes to workbook - begin')
-        wb = cls._load_workbook(file.blob)
+        wb = cls._load_workbook(file.blob, read_only=False, data_only=False)
         ws = wb.active  # only get single (first) worksheet for now
 
         # take a snapshot of row2 values for use in formula translation
@@ -139,15 +145,15 @@ class FileDataService:
         logger.info('Converted workbook to bytes')
         file.blob = file_bytes
         session.commit()
-        file_cache.remove(file.id)  # remove old version of file data from cache
+        file_cache.remove(id_=file.id)  # remove old version of file data from cache
         logger.info('Apply changes to workbook - complete')
         return True
 
     @classmethod
-    def _load_workbook(cls, file_bytes: bytes) -> Workbook:
+    def _load_workbook(cls, file_bytes: bytes, read_only: bool, data_only: bool) -> Workbook:
         """Load workbook in read/write mode for updating contents or getting data types"""
         virtual_file = io.BytesIO(file_bytes)
-        wb = load_workbook(virtual_file, read_only=False, data_only=False)
+        wb = load_workbook(virtual_file, read_only=read_only, data_only=data_only)
         return wb
 
     @classmethod
