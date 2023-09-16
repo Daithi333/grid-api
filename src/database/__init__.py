@@ -1,7 +1,7 @@
 import logging
 
 from config import Config
-from .db import SqliteDatabase, PostgresDatabase
+from .db import Database
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +10,6 @@ kwargs = {}
 
 if Config.DB_ENGINE == 'sqlite':
     connect_args = {"check_same_thread": False}
-    db = SqliteDatabase(Config.DB_URL, connect_args=connect_args)
-    logger.info('Initialised SqLite Database')
 
 elif Config.DB_ENGINE == 'postgresql':
     kwargs = {
@@ -19,11 +17,10 @@ elif Config.DB_ENGINE == 'postgresql':
         'max_overflow': Config.DB_MAX_OVERFLOW,
         'pool_pre_ping': True
     }
-    db = PostgresDatabase(Config.DB_URL, connect_args={}, **kwargs)
-    logger.info('Initialised PostgreSQL Database')
 
 else:
     raise ValueError(f'Unknown Database Engine provided: {Config.DB_ENGINE}')
 
-# db.drop_schema()
-db.create_schema()
+db = Database(Config.DB_URL, connect_args={}, **kwargs)
+
+logger.info(f'Initialised {Config.DB_ENGINE} Database')

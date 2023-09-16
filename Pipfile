@@ -16,6 +16,7 @@ shortuuid = "*"
 sqlalchemy = "*"
 xlwings = "*"
 pytest-cov = "*"
+sqlalchemy-utils = "*"
 
 [dev-packages]
 pytest = "*"
